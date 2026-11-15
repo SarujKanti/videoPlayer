@@ -1,0 +1,272 @@
+package com.skd.videoplayer.presentation.player
+
+import android.content.Context
+import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MediaMetadata
+import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
+import androidx.media3.common.TrackSelectionOverride
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.exoplayer.DefaultRenderersFactory
+import androidx.media3.exoplayer.ExoPlayer
+import com.skd.videoplayer.data.local.ContentUriMetadataReader
+import com.skd.videoplayer.domain.model.Video
+import com.skd.videoplayer.domain.usecase.GetPlaybackQueueUseCase
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.Locale
+import javax.inject.Inject
+
+/**
+ * Owns the single [ExoPlayer] for the player screen. Living in the ViewModel means the player
+ * survives rotation and recomposition and is released exactly once, in [onCleared].
+ */
+@OptIn(UnstableApi::class)
+@HiltViewModel
+class PlayerViewModel @Inject constructor(
+    @ApplicationContext context: Context,
+    private val getPlaybackQueue: GetPlaybackQueueUseCase,
+    private val uriMetadata: ContentUriMetadataReader,
+) : ViewModel() {
+
+    val player: ExoPlayer = ExoPlayer.Builder(context)
+        // Falls back to another decoder (e.g. software) when the preferred one fails to start.
+        .setRenderersFactory(DefaultRenderersFactory(context).setEnableDecoderFallback(true))
+        // Requests audio focus, pausing for calls and ducking for notifications.
+        .setAudioAttributes(
+            AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            /* handleAudioFocus = */ true,
+        )
+        // Pauses when headphones are unplugged or Bluetooth disconnects.
+        .setHandleAudioBecomingNoisy(true)
+        .setSeekBackIncrementMs(SEEK_STEP_MS)
+        .setSeekForwardIncrementMs(SEEK_STEP_MS)
+        .build()
+        .apply {
+            // Show embedded subtitles in the device language automatically when present.
+            trackSelectionParameters = trackSelectionParameters.buildUpon()
+                .setPreferredTextLanguage(Locale.getDefault().language)
+                .build()
+        }
+
+    private val _uiState = MutableStateFlow(PlayerUiState())
+    val uiState: StateFlow<PlayerUiState> = _uiState.asStateFlow()
+
+    private val listener = object : Player.Listener {
+        override fun onEvents(player: Player, events: Player.Events) {
+            if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)) {
+                _uiState.update { it.copy(error = null) }
+            }
+            syncFromPlayer()
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            _uiState.update { it.copy(error = PlaybackErrorKind.fromErrorCode(error.errorCode), isLoading = false) }
+        }
+    }
+
+    init {
+        player.addListener(listener)
+        // Position isn't pushed by the player, so poll it while playing.
+        viewModelScope.launch {
+            while (isActive) {
+                if (player.isPlaying) syncProgress()
+                delay(PROGRESS_INTERVAL_MS)
+            }
+        }
+    }
+
+    /**
+     * Starts playback for [request]. A repeated call for the same screen (rotation, activity
+     * re-creation) is ignored unless [replace] is set, e.g. when a new "open with" arrives.
+     */
+    fun open(request: PlayerRequest, replace: Boolean = false) {
+        if (!replace && player.mediaItemCount > 0) return
+        _uiState.update { PlayerUiState(isLoading = true, scaleMode = it.scaleMode) }
+        viewModelScope.launch {
+            val (items, startIndex) = when (request) {
+                is PlayerRequest.Library -> {
+                    val queue = getPlaybackQueue(request.videoIds, request.startId)
+                    queue.videos.map(::toMediaItem) to queue.startIndex
+                }
+                is PlayerRequest.External -> listOf(toMediaItem(request.uri, uriMetadata.displayName(request.uri))) to 0
+            }
+            if (items.isEmpty()) {
+                _uiState.update { it.copy(isLoading = false, error = PlaybackErrorKind.EMPTY_QUEUE) }
+                return@launch
+            }
+            player.setMediaItems(items, startIndex, C.TIME_UNSET)
+            player.prepare()
+            player.playWhenReady = true
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    fun togglePlayPause() {
+        when {
+            player.playbackState == Player.STATE_ENDED -> {
+                player.seekTo(player.currentMediaItemIndex, 0)
+                player.play()
+            }
+            player.isPlaying -> player.pause()
+            else -> {
+                if (player.playbackState == Player.STATE_IDLE) player.prepare()
+                player.play()
+            }
+        }
+    }
+
+    fun pause() = player.pause()
+
+    fun seekTo(positionMs: Long) {
+        player.seekTo(positionMs.coerceIn(0, maxOf(player.duration, 0)))
+        syncProgress()
+    }
+
+    fun seekBy(deltaMs: Long) = seekTo(player.currentPosition + deltaMs)
+
+    fun previous() = player.seekToPrevious()
+
+    fun next() = player.seekToNext()
+
+    fun setSpeed(speed: Float) {
+        player.playbackParameters = PlaybackParameters(speed)
+    }
+
+    fun cycleRepeatMode() {
+        player.repeatMode = when (player.repeatMode) {
+            Player.REPEAT_MODE_OFF -> Player.REPEAT_MODE_ALL
+            Player.REPEAT_MODE_ALL -> Player.REPEAT_MODE_ONE
+            else -> Player.REPEAT_MODE_OFF
+        }
+    }
+
+    fun toggleShuffle() {
+        player.shuffleModeEnabled = !player.shuffleModeEnabled
+    }
+
+    fun cycleScaleMode() = _uiState.update { it.copy(scaleMode = it.scaleMode.next()) }
+
+    fun setLocked(locked: Boolean) = _uiState.update { it.copy(isLocked = locked) }
+
+    fun selectAudioTrack(option: TrackOption) = selectTrack(C.TRACK_TYPE_AUDIO, option)
+
+    /** `null` turns subtitles off. */
+    fun selectSubtitleTrack(option: TrackOption?) {
+        if (option == null) {
+            player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .build()
+        } else {
+            selectTrack(C.TRACK_TYPE_TEXT, option)
+        }
+    }
+
+    fun retry() {
+        _uiState.update { it.copy(error = null) }
+        player.prepare()
+        player.play()
+    }
+
+    fun skipFailedVideo() {
+        _uiState.update { it.copy(error = null) }
+        player.seekToNextMediaItem()
+        player.prepare()
+        player.play()
+    }
+
+    private fun selectTrack(trackType: Int, option: TrackOption) {
+        val group = player.currentTracks.groups.getOrNull(option.groupIndex) ?: return
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(trackType, false)
+            .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, option.trackIndex))
+            .build()
+    }
+
+    private fun syncProgress() {
+        _uiState.update {
+            it.copy(
+                positionMs = player.currentPosition.coerceAtLeast(0),
+                bufferedMs = player.bufferedPosition.coerceAtLeast(0),
+                durationMs = player.duration.takeIf { d -> d != C.TIME_UNSET } ?: 0,
+            )
+        }
+    }
+
+    private fun syncFromPlayer() {
+        val tracks = player.currentTracks
+        val videoSize = player.videoSize
+        _uiState.update { state ->
+            state.copy(
+                title = player.mediaMetadata.title?.toString() ?: state.title,
+                isPlaying = player.isPlaying,
+                isBuffering = player.playbackState == Player.STATE_BUFFERING,
+                isEnded = player.playbackState == Player.STATE_ENDED,
+                positionMs = player.currentPosition.coerceAtLeast(0),
+                bufferedMs = player.bufferedPosition.coerceAtLeast(0),
+                durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0,
+                hasPrevious = player.hasPreviousMediaItem(),
+                hasNext = player.hasNextMediaItem(),
+                queueIndex = player.currentMediaItemIndex,
+                queueSize = player.mediaItemCount,
+                speed = player.playbackParameters.speed,
+                repeatMode = when (player.repeatMode) {
+                    Player.REPEAT_MODE_ALL -> PlayerRepeatMode.ALL
+                    Player.REPEAT_MODE_ONE -> PlayerRepeatMode.ONE
+                    else -> PlayerRepeatMode.OFF
+                },
+                shuffle = player.shuffleModeEnabled,
+                // Anamorphic videos store non-square pixels; correct for the true display shape.
+                videoWidth = (videoSize.width * videoSize.pixelWidthHeightRatio).toInt(),
+                videoHeight = videoSize.height,
+                audioTracks = TrackOptions.from(tracks, C.TRACK_TYPE_AUDIO),
+                subtitleTracks = TrackOptions.from(tracks, C.TRACK_TYPE_TEXT),
+                subtitlesOff = C.TRACK_TYPE_TEXT in player.trackSelectionParameters.disabledTrackTypes ||
+                    !tracks.isTypeSelected(C.TRACK_TYPE_TEXT),
+                videoUnsupported = TrackOptions.hasOnlyUnsupported(tracks, C.TRACK_TYPE_VIDEO),
+                audioUnsupported = TrackOptions.hasOnlyUnsupported(tracks, C.TRACK_TYPE_AUDIO),
+            )
+        }
+    }
+
+    private fun toMediaItem(video: Video): MediaItem =
+        MediaItem.Builder()
+            .setMediaId(video.id.toString())
+            .setUri(video.uri)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(video.title).build())
+            .build()
+
+    private fun toMediaItem(uri: Uri, title: String): MediaItem =
+        MediaItem.Builder()
+            .setMediaId(uri.toString())
+            .setUri(uri)
+            .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
+            .build()
+
+    override fun onCleared() {
+        player.removeListener(listener)
+        player.release()
+    }
+
+    companion object {
+        const val SEEK_STEP_MS = 10_000L
+        private const val PROGRESS_INTERVAL_MS = 250L
+    }
+}
