@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Dark window background avoids a white flash before Compose draws. -->
+    <style name="Theme.VideoPlayer" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/window_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
 
-    <style name="Theme.VideoPlayer" parent="android:Theme.Material.Light.NoActionBar" />
+    <!-- Pure black behind the video so letterbox bars blend in. -->
+    <style name="Theme.VideoPlayer.Player">
+        <item name="android:windowBackground">@android:color/black</item>
+    </style>
 </resources>
