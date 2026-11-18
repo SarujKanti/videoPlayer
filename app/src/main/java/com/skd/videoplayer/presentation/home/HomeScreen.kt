@@ -7,11 +7,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.skd.videoplayer.presentation.components.VideoActionsHost
 import com.skd.videoplayer.presentation.components.VideoBrowser
 
 @Composable
@@ -22,6 +25,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     // System file picker: plays any video the user chooses without needing storage permission.
     val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         uri?.let(onOpenUri)
@@ -41,5 +45,8 @@ fun HomeScreen(
                 Icon(Icons.Outlined.FileOpen, contentDescription = "Open a video file")
             }
         },
+        onMenuAction = viewModel::onMenuAction,
+        snackbarHostState = snackbarHostState,
     )
+    VideoActionsHost(viewModel = viewModel, dialog = state.dialog, snackbarHostState = snackbarHostState)
 }
