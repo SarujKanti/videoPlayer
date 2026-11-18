@@ -1,6 +1,7 @@
 package com.skd.videoplayer.presentation.components
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -23,6 +24,8 @@ import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -55,77 +58,94 @@ fun VideoBrowser(
     onVideoClick: ((Video) -> Unit)? = null,
     /** Extra header buttons, shown before the layout and sort buttons. */
     actions: @Composable () -> Unit = {},
+    /** Shows the three-dot menu on each video when set. */
+    onMenuAction: ((Video, VideoMenuAction) -> Unit)? = null,
+    snackbarHostState: SnackbarHostState? = null,
 ) {
-    Column(modifier.fillMaxSize()) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = if (navigationIcon == null) 20.dp else 4.dp, end = 4.dp, top = 8.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            navigationIcon?.invoke()
-            Column(Modifier.weight(1f)) {
-                Text(
-                    text = title,
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                if (!state.isLoading && state.error == null) {
+    Box(modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = if (navigationIcon == null) 20.dp else 4.dp, end = 4.dp, top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                navigationIcon?.invoke()
+                Column(Modifier.weight(1f)) {
                     Text(
-                        text = videoCountLabel(state.totalCount),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = title,
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
+                    if (!state.isLoading && state.error == null) {
+                        Text(
+                            text = videoCountLabel(state.totalCount),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                actions()
+                LayoutToggleButton(state.layout, onLayoutChange)
+                SortMenuButton(state.sort, onSortChange)
+            }
+    
+            VideoSearchField(
+                query = state.query,
+                onQueryChange = onQueryChange,
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            )
+    
+            PullToRefreshBox(
+                isRefreshing = state.isRefreshing,
+                onRefresh = onRefresh,
+                modifier = Modifier.fillMaxSize(),
+            ) {
+                when {
+                    state.isLoading -> LoadingState()
+                    state.error != null && state.totalCount == 0 -> ScrollableStateContainer {
+                        ErrorState(message = state.error.message, onRetry = onRefresh)
+                    }
+                    state.totalCount == 0 -> ScrollableStateContainer {
+                        MessageState(
+                            icon = Icons.Outlined.VideoLibrary,
+                            title = emptyTitle,
+                            message = emptyMessage,
+                        )
+                    }
+                    state.videos.isEmpty() -> ScrollableStateContainer {
+                        MessageState(
+                            icon = Icons.Outlined.SearchOff,
+                            title = "No matches",
+                            message = "Nothing matches “${state.query.trim()}”. Try a different name.",
+                            actionLabel = "Clear search",
+                            onAction = { onQueryChange("") },
+                            iconTint = MaterialTheme.colorScheme.secondary,
+                        )
+                    }
+                    else -> VideoCollection(state, onVideoClick, onMenuAction)
                 }
             }
-            actions()
-            LayoutToggleButton(state.layout, onLayoutChange)
-            SortMenuButton(state.sort, onSortChange)
         }
-
-        VideoSearchField(
-            query = state.query,
-            onQueryChange = onQueryChange,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
-        )
-
-        PullToRefreshBox(
-            isRefreshing = state.isRefreshing,
-            onRefresh = onRefresh,
-            modifier = Modifier.fillMaxSize(),
-        ) {
-            when {
-                state.isLoading -> LoadingState()
-                state.error != null && state.totalCount == 0 -> ScrollableStateContainer {
-                    ErrorState(message = state.error.message, onRetry = onRefresh)
-                }
-                state.totalCount == 0 -> ScrollableStateContainer {
-                    MessageState(
-                        icon = Icons.Outlined.VideoLibrary,
-                        title = emptyTitle,
-                        message = emptyMessage,
-                    )
-                }
-                state.videos.isEmpty() -> ScrollableStateContainer {
-                    MessageState(
-                        icon = Icons.Outlined.SearchOff,
-                        title = "No matches",
-                        message = "Nothing matches “${state.query.trim()}”. Try a different name.",
-                        actionLabel = "Clear search",
-                        onAction = { onQueryChange("") },
-                        iconTint = MaterialTheme.colorScheme.secondary,
-                    )
-                }
-                else -> VideoCollection(state, onVideoClick)
-            }
+        snackbarHostState?.let {
+            SnackbarHost(
+                hostState = it,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(16.dp),
+            )
         }
     }
 }
 
 @Composable
-private fun VideoCollection(state: VideoListUiState, onVideoClick: ((Video) -> Unit)?) {
+private fun VideoCollection(
+    state: VideoListUiState,
+    onVideoClick: ((Video) -> Unit)?,
+    onMenuAction: ((Video, VideoMenuAction) -> Unit)?,
+) {
     val gridState = rememberLazyGridState()
     val listState = rememberLazyListState()
     // A new sort or search should start from the top rather than keep an arbitrary offset.
@@ -145,6 +165,8 @@ private fun VideoCollection(state: VideoListUiState, onVideoClick: ((Video) -> U
             items(state.videos, key = { it.id }, contentType = { "video" }) { video ->
                 VideoGridItem(
                     video = video,
+                    isFavorite = video.id in state.favoriteIds,
+                    onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
                 )
@@ -158,6 +180,8 @@ private fun VideoCollection(state: VideoListUiState, onVideoClick: ((Video) -> U
             items(state.videos, key = { it.id }, contentType = { "video" }) { video ->
                 VideoListItem(
                     video = video,
+                    isFavorite = video.id in state.favoriteIds,
+                    onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
                 )
