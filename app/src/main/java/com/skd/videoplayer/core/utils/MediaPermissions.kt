@@ -19,6 +19,7 @@ enum class MediaAccess {
  */
 object MediaPermissions {
 
+    private const val SDK_Q = 29
     private const val SDK_TIRAMISU = 33
     private const val SDK_UPSIDE_DOWN_CAKE = 34
 
@@ -28,7 +29,9 @@ object MediaPermissions {
             Manifest.permission.READ_MEDIA_VISUAL_USER_SELECTED,
         )
         sdkInt >= SDK_TIRAMISU -> arrayOf(Manifest.permission.READ_MEDIA_VIDEO)
-        else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        sdkInt >= SDK_Q -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+        // Android 9 and below have no per-file consent, so renaming and deleting need write access.
+        else -> arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE)
     }
 
     fun accessLevel(sdkInt: Int, isGranted: (String) -> Boolean): MediaAccess = when {

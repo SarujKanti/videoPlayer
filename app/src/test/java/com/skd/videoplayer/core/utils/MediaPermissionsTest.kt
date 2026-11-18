@@ -10,8 +10,12 @@ class MediaPermissionsTest {
     @Test
     fun `requests the narrowest permission per Android version`() {
         assertArrayEquals(
-            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.WRITE_EXTERNAL_STORAGE),
             MediaPermissions.requiredPermissions(28),
+        )
+        assertArrayEquals(
+            arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE),
+            MediaPermissions.requiredPermissions(29),
         )
         assertArrayEquals(
             arrayOf(Manifest.permission.READ_MEDIA_VIDEO),

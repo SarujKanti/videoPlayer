@@ -3,17 +3,17 @@ package com.skd.videoplayer.presentation.home
 import androidx.lifecycle.SavedStateHandle
 import com.skd.videoplayer.domain.model.LibraryLayout
 import com.skd.videoplayer.domain.model.SortField
-import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.model.VideoSort
-import com.skd.videoplayer.domain.repository.VideoRepository
 import com.skd.videoplayer.domain.usecase.FilterAndSortVideosUseCase
+import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
 import com.skd.videoplayer.presentation.components.LibraryError
 import com.skd.videoplayer.presentation.components.VideoListUiState
+import com.skd.videoplayer.testutil.FakeFavoritesRepository
+import com.skd.videoplayer.testutil.FakeVideoEditRepository
+import com.skd.videoplayer.testutil.FakeVideoRepository
 import com.skd.videoplayer.testutil.testVideo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestScope
@@ -33,15 +33,6 @@ import org.junit.Test
 @OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
-    private class FakeVideoRepository : VideoRepository {
-        val library = MutableStateFlow<Result<List<Video>>>(Result.success(emptyList()))
-        var refreshCount = 0
-        override fun observeVideos(): Flow<Result<List<Video>>> = library
-        override suspend fun refresh() {
-            refreshCount++
-        }
-    }
-
     private val dispatcher = StandardTestDispatcher()
     private val repository = FakeVideoRepository()
 
@@ -52,7 +43,15 @@ class HomeViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun createViewModel() =
-        HomeViewModel(repository, FilterAndSortVideosUseCase(), dispatcher, SavedStateHandle())
+        HomeViewModel(
+            repository,
+            FakeFavoritesRepository(),
+            FakeVideoEditRepository(),
+            FilterAndSortVideosUseCase(),
+            ValidateVideoNameUseCase(),
+            dispatcher,
+            SavedStateHandle(),
+        )
 
     /** Keeps uiState subscribed (it uses WhileSubscribed) and returns the latest value. */
     private fun TestScope.observe(viewModel: HomeViewModel): () -> VideoListUiState {
