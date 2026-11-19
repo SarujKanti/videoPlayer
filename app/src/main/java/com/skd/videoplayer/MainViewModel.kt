@@ -12,7 +12,6 @@ import javax.inject.Inject
 class MainViewModel @Inject constructor(
     private val videoRepository: VideoRepository,
 ) : ViewModel() {
-
     fun onMediaAccessChanged() {
         viewModelScope.launch { videoRepository.refresh() }
     }
