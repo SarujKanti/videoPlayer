@@ -1,9 +1,11 @@
 package com.skd.videoplayer.testutil
 
+import com.skd.videoplayer.domain.model.ThemeMode
 import com.skd.videoplayer.domain.model.UserConsentRequest
 import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.model.VideoEditResult
 import com.skd.videoplayer.domain.repository.FavoritesRepository
+import com.skd.videoplayer.domain.repository.SettingsRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
 import kotlinx.coroutines.flow.Flow
@@ -28,6 +30,14 @@ class FakeFavoritesRepository : FavoritesRepository {
     }
     override suspend fun remove(videoId: Long) {
         ids.value = ids.value - videoId
+    }
+}
+
+class FakeSettingsRepository : SettingsRepository {
+    val mode = MutableStateFlow(ThemeMode.Default)
+    override val themeMode: Flow<ThemeMode> = mode
+    override suspend fun setThemeMode(mode: ThemeMode) {
+        this.mode.value = mode
     }
 }
 
