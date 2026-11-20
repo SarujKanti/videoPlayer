@@ -2,6 +2,8 @@ package com.skd.videoplayer.presentation.settings
 
 import com.skd.videoplayer.MainViewModel
 import com.skd.videoplayer.domain.model.ThemeMode
+import com.skd.videoplayer.domain.usecase.GetFavoriteVideosUseCase
+import com.skd.videoplayer.testutil.FakeFavoritesRepository
 import com.skd.videoplayer.testutil.FakeSettingsRepository
 import com.skd.videoplayer.testutil.FakeVideoRepository
 import kotlinx.coroutines.Dispatchers
@@ -49,7 +51,8 @@ class SettingsViewModelTest {
 
     @Test
     fun `main screen follows the theme setting`() = runTest(dispatcher) {
-        val viewModel = MainViewModel(FakeVideoRepository(), settings)
+        val videos = FakeVideoRepository()
+        val viewModel = MainViewModel(videos, settings, GetFavoriteVideosUseCase(videos, FakeFavoritesRepository()))
         advanceUntilIdle()
         assertEquals(ThemeMode.SYSTEM, viewModel.themeMode.value)
 

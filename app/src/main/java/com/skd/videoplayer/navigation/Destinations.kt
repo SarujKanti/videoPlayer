@@ -1,9 +1,11 @@
 package com.skd.videoplayer.navigation
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
+import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
@@ -15,6 +17,9 @@ data object LibraryRoute
 
 @Serializable
 data object FoldersRoute
+
+@Serializable
+data object FavoritesRoute
 
 @Serializable
 data object SettingsRoute
@@ -32,5 +37,6 @@ enum class TopLevelDestination(
 ) {
     LIBRARY(LibraryRoute, "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
     FOLDERS(FoldersRoute, "Folders", Icons.Filled.Folder, Icons.Outlined.Folder),
+    FAVORITES(FavoritesRoute, "Favorites", Icons.Filled.Favorite, Icons.Outlined.FavoriteBorder),
     SETTINGS(SettingsRoute, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
 }
