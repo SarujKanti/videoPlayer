@@ -52,7 +52,8 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     MediaPermissionGate(onAccessChanged = viewModel::onMediaAccessChanged) { access ->
-                        AppNavigation(mediaAccess = access)
+                        val favoriteCount by viewModel.favoriteCount.collectAsStateWithLifecycle()
+                        AppNavigation(mediaAccess = access, favoriteCount = favoriteCount)
                     }
                 }
             }
