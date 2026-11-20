@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -39,6 +41,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.skd.videoplayer.core.utils.MediaAccess
 import com.skd.videoplayer.presentation.components.MediaAccessState
+import com.skd.videoplayer.presentation.favorites.FavoritesScreen
 import com.skd.videoplayer.presentation.folders.FolderVideosScreen
 import com.skd.videoplayer.presentation.folders.FoldersScreen
 import com.skd.videoplayer.presentation.home.HomeScreen
@@ -46,7 +49,11 @@ import com.skd.videoplayer.presentation.player.PlayerRequest
 import com.skd.videoplayer.presentation.settings.SettingsScreen
 
 @Composable
-fun AppNavigation(mediaAccess: MediaAccessState) {
+fun AppNavigation(
+    mediaAccess: MediaAccessState,
+    /** Shown as a badge on the Favorites tab. */
+    favoriteCount: Int = 0,
+) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -57,7 +64,7 @@ fun AppNavigation(mediaAccess: MediaAccessState) {
         containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             if (showBottomBar) {
-                AppBottomBar(currentDestination) { navController.navigateToTopLevel(it) }
+                AppBottomBar(currentDestination, favoriteCount) { navController.navigateToTopLevel(it) }
             }
         },
     ) { innerPadding ->
@@ -91,6 +98,14 @@ fun AppNavigation(mediaAccess: MediaAccessState) {
                         },
                     )
                 }
+                composable<FavoritesRoute> {
+                    FavoritesScreen(
+                        onPlay = { ids, startId ->
+                            context.startActivity(PlayerRequest.libraryIntent(context, ids, startId))
+                        },
+                        onBrowseLibrary = { navController.navigateToTopLevel(TopLevelDestination.LIBRARY) },
+                    )
+                }
                 composable<SettingsRoute> { SettingsScreen() }
                 composable<FolderVideosRoute> {
                     FolderVideosScreen(
@@ -108,6 +123,7 @@ fun AppNavigation(mediaAccess: MediaAccessState) {
 @Composable
 private fun AppBottomBar(
     currentDestination: NavDestination?,
+    favoriteCount: Int,
     onNavigate: (TopLevelDestination) -> Unit,
 ) {
     NavigationBar(containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
@@ -117,10 +133,21 @@ private fun AppBottomBar(
                 selected = selected,
                 onClick = { onNavigate(destination) },
                 icon = {
-                    Icon(
-                        if (selected) destination.selectedIcon else destination.unselectedIcon,
-                        contentDescription = null,
-                    )
+                    val showBadge = destination == TopLevelDestination.FAVORITES && favoriteCount > 0
+                    BadgedBox(
+                        badge = {
+                            if (showBadge) {
+                                Badge(containerColor = MaterialTheme.colorScheme.primary) {
+                                    Text(if (favoriteCount > 99) "99+" else favoriteCount.toString())
+                                }
+                            }
+                        },
+                    ) {
+                        Icon(
+                            if (selected) destination.selectedIcon else destination.unselectedIcon,
+                            contentDescription = if (showBadge) "$favoriteCount favorites" else null,
+                        )
+                    }
                 },
                 label = { Text(destination.label) },
                 colors = NavigationBarItemDefaults.colors(
