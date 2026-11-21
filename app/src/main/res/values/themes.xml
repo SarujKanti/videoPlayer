@@ -14,6 +14,8 @@
     <style name="Theme.VideoPlayer.Starting" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- Only applied on Android 12+; older versions draw the icon without a disc. -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
         <item name="postSplashScreenTheme">@style/Theme.VideoPlayer</item>
     </style>
 

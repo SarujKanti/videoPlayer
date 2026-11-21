@@ -6,4 +6,6 @@
     <color name="splash_background">#FF0D0E12</color>
     <!-- Lumora amber accent, matching DarkPalette.Primary. -->
     <color name="splash_icon_accent">#FFFFB45C</color>
+    <!-- Disc behind the icon on Android 12+, one step up from the background (SurfaceHigh). -->
+    <color name="splash_icon_background">#FF1F2128</color>
 </resources>
