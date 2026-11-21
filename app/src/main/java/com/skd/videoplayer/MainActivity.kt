@@ -4,6 +4,7 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
@@ -34,6 +35,15 @@ class MainActivity : ComponentActivity() {
 
         viewModel.awaitInitialLibrary(hasMediaAccess = hasMediaAccess())
         splashScreen.setKeepOnScreenCondition { !viewModel.isReady.value }
+        // Fade the splash out instead of cutting straight to the first frame.
+        splashScreen.setOnExitAnimationListener { provider ->
+            provider.view.animate()
+                .alpha(0f)
+                .setDuration(SPLASH_EXIT_DURATION_MS)
+                .setInterpolator(AccelerateInterpolator())
+                .withEndAction { provider.remove() }
+                .start()
+        }
 
         // The app theme is dark regardless of the system setting, so force light system-bar icons.
         enableEdgeToEdge(
@@ -59,4 +69,8 @@ class MainActivity : ComponentActivity() {
         MediaPermissions.accessLevel(Build.VERSION.SDK_INT) {
             ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED
         } != MediaAccess.NONE
+
+    private companion object {
+        const val SPLASH_EXIT_DURATION_MS = 250L
+    }
 }
