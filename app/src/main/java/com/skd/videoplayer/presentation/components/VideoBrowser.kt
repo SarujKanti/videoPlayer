@@ -5,13 +5,15 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -26,22 +28,23 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skd.videoplayer.domain.model.LibraryLayout
 import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.model.VideoSort
 
 /**
- * Header, search field and a pull-to-refresh grid or list of videos, with loading, empty,
- * no-results and error states. Shared by the library and folder screens.
+ * Header, search, sort/layout toolbar and a pull-to-refresh grid or list of videos, with
+ * loading, empty, no-results and error states. Shared by the library, folder and favorites screens.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -60,55 +63,51 @@ fun VideoBrowser(
     emptyActionLabel: String? = null,
     onEmptyAction: (() -> Unit)? = null,
     onVideoClick: ((Video) -> Unit)? = null,
-    /** Extra header buttons, shown before the layout and sort buttons. */
-    actions: @Composable () -> Unit = {},
+    /** Extra header buttons, shown at the end of the title row. */
+    actions: @Composable RowScope.() -> Unit = {},
     /** Shows the three-dot menu on each video when set. */
     onMenuAction: ((Video, VideoMenuAction) -> Unit)? = null,
     snackbarHostState: SnackbarHostState? = null,
 ) {
+    val gridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+    val scrolled by remember(state.layout) {
+        derivedStateOf { if (state.layout == LibraryLayout.GRID) gridState.isScrolled() else listState.isScrolled() }
+    }
+    val showToolbar = !state.isLoading && state.totalCount > 0
+
     Box(modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = if (navigationIcon == null) 20.dp else 4.dp, end = 4.dp, top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                navigationIcon?.invoke()
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        text = title,
-                        style = MaterialTheme.typography.headlineMedium,
-                        color = MaterialTheme.colorScheme.onSurface,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
+            ScreenHeader(
+                title = title,
+                scrolled = scrolled,
+                navigationIcon = navigationIcon,
+                actions = actions,
+                below = {
+                    VideoSearchField(
+                        query = state.query,
+                        onQueryChange = onQueryChange,
+                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
                     )
-                    if (!state.isLoading && state.error == null) {
-                        Text(
-                            text = videoCountLabel(state.totalCount),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    if (showToolbar) {
+                        ListToolbar(
+                            countLabel = countLabel(state),
+                            sort = state.sort,
+                            onSortChange = onSortChange,
+                            layout = state.layout,
+                            onLayoutChange = onLayoutChange,
                         )
                     }
-                }
-                actions()
-                LayoutToggleButton(state.layout, onLayoutChange)
-                SortMenuButton(state.sort, onSortChange)
-            }
-    
-            VideoSearchField(
-                query = state.query,
-                onQueryChange = onQueryChange,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                },
             )
-    
+
             PullToRefreshBox(
                 isRefreshing = state.isRefreshing,
                 onRefresh = onRefresh,
                 modifier = Modifier.fillMaxSize(),
             ) {
                 when {
-                    state.isLoading -> LoadingState()
+                    state.isLoading -> VideoSkeleton(state.layout)
                     state.error != null && state.totalCount == 0 -> ScrollableStateContainer {
                         ErrorState(message = state.error.message, onRetry = onRefresh)
                     }
@@ -131,7 +130,7 @@ fun VideoBrowser(
                             iconTint = MaterialTheme.colorScheme.secondary,
                         )
                     }
-                    else -> VideoCollection(state, onVideoClick, onMenuAction)
+                    else -> VideoCollection(state, gridState, listState, onVideoClick, onMenuAction)
                 }
             }
         }
@@ -146,14 +145,27 @@ fun VideoBrowser(
     }
 }
 
+private fun LazyGridState.isScrolled() = firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0
+private fun LazyListState.isScrolled() = firstVisibleItemIndex > 0 || firstVisibleItemScrollOffset > 0
+
+/** `128 videos`, or `3 of 128 videos` while searching. */
+private fun countLabel(state: VideoListUiState): String =
+    if (state.query.isBlank()) {
+        videoCountLabel(state.totalCount)
+    } else {
+        "${state.videos.size} of ${videoCountLabel(state.totalCount)}"
+    }
+
 @Composable
 private fun VideoCollection(
     state: VideoListUiState,
+    gridState: LazyGridState,
+    listState: LazyListState,
     onVideoClick: ((Video) -> Unit)?,
     onMenuAction: ((Video, VideoMenuAction) -> Unit)?,
 ) {
-    val gridState = rememberLazyGridState()
-    val listState = rememberLazyListState()
+    // One clock reading per list keeps "Yesterday"/"NEW" consistent across every item.
+    val nowMs = remember(state.videos) { System.currentTimeMillis() }
     // A new sort or search should start from the top rather than keep an arbitrary offset.
     LaunchedEffect(state.sort, state.query) {
         gridState.scrollToItem(0)
@@ -163,15 +175,16 @@ private fun VideoCollection(
         LibraryLayout.GRID -> LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = 164.dp),
             state = gridState,
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 24.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
+            verticalArrangement = Arrangement.spacedBy(18.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(state.videos, key = { it.id }, contentType = { "video" }) { video ->
                 VideoGridItem(
                     video = video,
                     isFavorite = video.id in state.favoriteIds,
+                    nowMs = nowMs,
                     onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
@@ -180,13 +193,14 @@ private fun VideoCollection(
         }
         LibraryLayout.LIST -> LazyColumn(
             state = listState,
-            contentPadding = PaddingValues(bottom = 24.dp),
+            contentPadding = PaddingValues(top = 4.dp, bottom = 24.dp),
             modifier = Modifier.fillMaxSize(),
         ) {
             items(state.videos, key = { it.id }, contentType = { "video" }) { video ->
                 VideoListItem(
                     video = video,
                     isFavorite = video.id in state.favoriteIds,
+                    nowMs = nowMs,
                     onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
