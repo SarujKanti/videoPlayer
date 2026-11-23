@@ -43,6 +43,7 @@ import com.skd.videoplayer.presentation.folders.FolderVideosScreen
 import com.skd.videoplayer.presentation.folders.FoldersScreen
 import com.skd.videoplayer.presentation.home.HomeScreen
 import com.skd.videoplayer.presentation.player.PlayerRequest
+import com.skd.videoplayer.presentation.settings.SettingsScreen
 
 @Composable
 fun AppNavigation(mediaAccess: MediaAccessState) {
@@ -90,6 +91,7 @@ fun AppNavigation(mediaAccess: MediaAccessState) {
                         },
                     )
                 }
+                composable<SettingsRoute> { SettingsScreen() }
                 composable<FolderVideosRoute> {
                     FolderVideosScreen(
                         onBack = navController::popBackStack,

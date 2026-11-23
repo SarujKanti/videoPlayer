@@ -2,6 +2,7 @@ package com.skd.videoplayer
 
 import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.repository.VideoRepository
+import com.skd.videoplayer.testutil.FakeSettingsRepository
 import com.skd.videoplayer.testutil.FakeVideoRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -34,20 +35,20 @@ class MainViewModelTest {
 
     @Test
     fun `is not ready before the wait starts`() {
-        val viewModel = MainViewModel(FakeVideoRepository())
+        val viewModel = MainViewModel(FakeVideoRepository(), FakeSettingsRepository())
         assertFalse(viewModel.isReady.value)
     }
 
     @Test
     fun `without media access it is ready immediately`() {
-        val viewModel = MainViewModel(FakeVideoRepository())
+        val viewModel = MainViewModel(FakeVideoRepository(), FakeSettingsRepository())
         viewModel.awaitInitialLibrary(hasMediaAccess = false)
         assertTrue(viewModel.isReady.value)
     }
 
     @Test
     fun `with media access it becomes ready once the library emits`() = runTest(dispatcher) {
-        val viewModel = MainViewModel(FakeVideoRepository())
+        val viewModel = MainViewModel(FakeVideoRepository(), FakeSettingsRepository())
         viewModel.awaitInitialLibrary(hasMediaAccess = true)
         assertFalse(viewModel.isReady.value)
 
@@ -57,7 +58,7 @@ class MainViewModelTest {
 
     @Test
     fun `a library that never emits is capped by the timeout`() = runTest(dispatcher) {
-        val viewModel = MainViewModel(SilentVideoRepository())
+        val viewModel = MainViewModel(SilentVideoRepository(), FakeSettingsRepository())
         viewModel.awaitInitialLibrary(hasMediaAccess = true)
 
         advanceTimeBy(MainViewModel.SPLASH_MAX_DURATION_MS - 1)
@@ -70,7 +71,7 @@ class MainViewModelTest {
     @Test
     fun `calling it again does not start a second wait`() = runTest(dispatcher) {
         val repository = CountingVideoRepository()
-        val viewModel = MainViewModel(repository)
+        val viewModel = MainViewModel(repository, FakeSettingsRepository())
         viewModel.awaitInitialLibrary(hasMediaAccess = true)
         viewModel.awaitInitialLibrary(hasMediaAccess = true)
         advanceUntilIdle()
@@ -82,7 +83,7 @@ class MainViewModelTest {
     @Test
     fun `media access change still refreshes the library`() = runTest(dispatcher) {
         val repository = FakeVideoRepository()
-        val viewModel = MainViewModel(repository)
+        val viewModel = MainViewModel(repository, FakeSettingsRepository())
         viewModel.onMediaAccessChanged()
         advanceUntilIdle()
         assertEquals(1, repository.refreshCount)

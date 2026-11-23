@@ -2,8 +2,10 @@ package com.skd.videoplayer.navigation
 
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VideoLibrary
 import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.VideoLibrary
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.serialization.Serializable
@@ -13,6 +15,9 @@ data object LibraryRoute
 
 @Serializable
 data object FoldersRoute
+
+@Serializable
+data object SettingsRoute
 
 /** Property names are read back by [com.skd.videoplayer.presentation.folders.FolderVideosViewModel]. */
 @Serializable
@@ -27,4 +32,5 @@ enum class TopLevelDestination(
 ) {
     LIBRARY(LibraryRoute, "Library", Icons.Filled.VideoLibrary, Icons.Outlined.VideoLibrary),
     FOLDERS(FoldersRoute, "Folders", Icons.Filled.Folder, Icons.Outlined.Folder),
+    SETTINGS(SettingsRoute, "Settings", Icons.Filled.Settings, Icons.Outlined.Settings),
 }

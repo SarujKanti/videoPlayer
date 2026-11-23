@@ -2,25 +2,34 @@ package com.skd.videoplayer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.skd.videoplayer.domain.model.ThemeMode
+import com.skd.videoplayer.domain.repository.SettingsRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
 
 /**
- * Activity-level state. Re-scans the library when the user grants or changes media access, and
- * tells the splash screen when the first screen has something to show.
+ * Activity-level state: the app theme, re-scanning the library when the user grants or changes
+ * media access, and telling the splash screen when the first screen has something to show.
  */
 @HiltViewModel
 class MainViewModel @Inject constructor(
     private val videoRepository: VideoRepository,
+    settingsRepository: SettingsRepository,
 ) : ViewModel() {
+
+    /** Null until the saved choice is read, so the first frame never shows the wrong theme. */
+    val themeMode: StateFlow<ThemeMode?> =
+        settingsRepository.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private val _isReady = MutableStateFlow(false)
 

@@ -2,10 +2,12 @@ package com.skd.videoplayer.di
 
 import com.skd.videoplayer.data.repository.FavoritesRepositoryImpl
 import com.skd.videoplayer.data.repository.MediaStoreVideoRowSource
+import com.skd.videoplayer.data.repository.SettingsRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoEditRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoRowSource
 import com.skd.videoplayer.domain.repository.FavoritesRepository
+import com.skd.videoplayer.domain.repository.SettingsRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
 import dagger.Binds
@@ -28,4 +30,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindVideoEditRepository(impl: VideoEditRepositoryImpl): VideoEditRepository
+
+    @Binds
+    abstract fun bindSettingsRepository(impl: SettingsRepositoryImpl): SettingsRepository
 }

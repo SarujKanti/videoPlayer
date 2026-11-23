@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="window_background">#FF0D0E12</color>
+
+    <!-- Splash screen: same graphite as the app background so the hand-off to Compose is seamless. -->
+    <color name="splash_background">#FF0D0E12</color>
+    <!-- Lumora amber accent, matching DarkPalette.Primary. -->
+    <color name="splash_icon_accent">#FFFFB45C</color>
+    <!-- Disc behind the icon on Android 12+, one step up from the background (SurfaceHigh). -->
+    <color name="splash_icon_background">#FF1F2128</color>
+</resources>
