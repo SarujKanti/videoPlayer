@@ -24,6 +24,33 @@ class FormattersTest {
     }
 
     @Test
+    fun relativeDate() {
+        val day = 24L * 60 * 60 * 1000
+        val now = 1_763_000_000_000L
+        assertEquals("Today", Formatters.relativeDate(now - 1_000, now))
+        assertEquals("Yesterday", Formatters.relativeDate(now - day - 1_000, now))
+        assertEquals("3 days ago", Formatters.relativeDate(now - 3 * day, now))
+        assertEquals("1 week ago", Formatters.relativeDate(now - 8 * day, now))
+        assertEquals("3 weeks ago", Formatters.relativeDate(now - 22 * day, now))
+        assertEquals("", Formatters.relativeDate(0, now))
+        // Older than a month falls back to a calendar date.
+        val old = now - 400 * day
+        assertEquals(
+            java.text.SimpleDateFormat("d MMM yyyy", Locale.US).format(java.util.Date(old)),
+            Formatters.relativeDate(old, now, Locale.US),
+        )
+    }
+
+    @Test
+    fun isNewMeansAddedInTheLastTwoDays() {
+        val day = 24L * 60 * 60 * 1000
+        val now = 1_763_000_000_000L
+        assertEquals(true, Formatters.isNew(now - day, now))
+        assertEquals(false, Formatters.isNew(now - 3 * day, now))
+        assertEquals(false, Formatters.isNew(0, now))
+    }
+
+    @Test
     fun qualityLabelUsesShorterSide() {
         assertEquals("1080p", Formatters.qualityLabel(1920, 1080))
         assertEquals("1080p", Formatters.qualityLabel(1080, 1920)) // portrait
