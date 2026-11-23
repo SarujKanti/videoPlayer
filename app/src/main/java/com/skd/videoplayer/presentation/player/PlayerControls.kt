@@ -1,6 +1,7 @@
 package com.skd.videoplayer.presentation.player
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -44,8 +45,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Slider
-import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -53,9 +52,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -239,6 +240,8 @@ private fun BottomBar(
     modifier: Modifier = Modifier,
 ) {
     var scrubFraction by remember { mutableStateOf<Float?>(null) }
+    // Tapping the total time switches it to time remaining, and back.
+    var showRemaining by rememberSaveable { mutableStateOf(false) }
     val duration = state.durationMs.coerceAtLeast(1)
     val shownPosition = scrubFraction?.let { (it * duration).toLong() } ?: state.positionMs
 
@@ -265,27 +268,33 @@ private fun BottomBar(
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             TimeLabel(Formatters.duration(shownPosition))
-            Slider(
-                value = scrubFraction ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f),
-                onValueChange = {
+            SeekBar(
+                fraction = scrubFraction ?: (state.positionMs.toFloat() / duration).coerceIn(0f, 1f),
+                bufferedFraction = (state.bufferedMs.toFloat() / duration).coerceIn(0f, 1f),
+                enabled = state.durationMs > 0,
+                onScrub = {
                     scrubFraction = it
                     actions.onScrub()
                 },
-                onValueChangeFinished = {
+                onScrubFinished = {
                     scrubFraction?.let { actions.onSeekTo((it * duration).toLong()) }
                     scrubFraction = null
                 },
-                enabled = state.durationMs > 0,
-                colors = SliderDefaults.colors(
-                    thumbColor = MaterialTheme.colorScheme.primary,
-                    activeTrackColor = MaterialTheme.colorScheme.primary,
-                    inactiveTrackColor = Color.White.copy(alpha = 0.3f),
-                ),
                 modifier = Modifier
                     .weight(1f)
                     .padding(horizontal = 12.dp),
             )
-            TimeLabel(Formatters.duration(state.durationMs))
+            TimeLabel(
+                text = if (showRemaining) {
+                    "−" + Formatters.duration((state.durationMs - shownPosition).coerceAtLeast(0))
+                } else {
+                    Formatters.duration(state.durationMs)
+                },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .clickable { showRemaining = !showRemaining }
+                    .padding(horizontal = 4.dp, vertical = 2.dp),
+            )
         }
 
         Row(
@@ -332,12 +341,13 @@ private fun unsupportedTrackMessage(state: PlayerUiState): String? = when {
 }
 
 @Composable
-private fun TimeLabel(text: String) {
+private fun TimeLabel(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
         color = ControlTint,
         textAlign = TextAlign.Center,
+        modifier = modifier,
     )
 }
 

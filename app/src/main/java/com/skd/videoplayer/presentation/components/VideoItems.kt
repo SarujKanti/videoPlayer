@@ -4,16 +4,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.outlined.Delete
@@ -34,6 +37,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -44,19 +48,52 @@ import com.skd.videoplayer.presentation.theme.ThumbnailScrim
 private fun Modifier.clickableIf(onClick: (() -> Unit)?): Modifier =
     if (onClick != null) clickable(onClick = onClick) else this
 
-/** Card-style tile for grid layouts. The three-dot menu sits at the bottom right. */
+/**
+ * Badges over a thumbnail, each in its own corner so they never compete:
+ * NEW top-left, favorite top-right, quality bottom-left, duration bottom-right.
+ */
+@Composable
+private fun BoxScope.ThumbnailOverlays(
+    video: Video,
+    isFavorite: Boolean,
+    nowMs: Long,
+    showQuality: Boolean,
+    inset: androidx.compose.ui.unit.Dp,
+) {
+    Box(Modifier.matchParentSize()) {
+        if (Formatters.isNew(video.dateAddedEpochMs, nowMs)) {
+            StatusPill("NEW", Modifier.align(Alignment.TopStart).padding(inset))
+        }
+        if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(inset - 2.dp))
+        if (showQuality) {
+            Formatters.qualityLabel(video.width, video.height)?.let {
+                ThumbnailBadge(it, Modifier.align(Alignment.BottomStart).padding(inset))
+            }
+        }
+        if (video.durationMs > 0) {
+            ThumbnailBadge(
+                Formatters.duration(video.durationMs),
+                Modifier.align(Alignment.BottomEnd).padding(inset),
+            )
+        }
+    }
+}
+
+/** Tile for grid layouts. The three-dot menu sits at the bottom right. */
 @Composable
 fun VideoGridItem(
     video: Video,
     isFavorite: Boolean,
+    nowMs: Long,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onMenuAction: ((VideoMenuAction) -> Unit)? = null,
 ) {
     Column(
         modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
             .clickableIf(onClick)
-            .padding(bottom = 4.dp),
+            .padding(bottom = 2.dp),
     ) {
         Box {
             VideoThumbnailImage(
@@ -65,25 +102,16 @@ fun VideoGridItem(
                     .fillMaxWidth()
                     .aspectRatio(16f / 10f),
             )
-            Formatters.qualityLabel(video.width, video.height)?.let {
-                ThumbnailBadge(it, Modifier.align(Alignment.TopStart).padding(8.dp))
-            }
-            if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(6.dp))
-            if (video.durationMs > 0) {
-                ThumbnailBadge(
-                    Formatters.duration(video.durationMs),
-                    Modifier.align(Alignment.BottomEnd).padding(8.dp),
-                )
-            }
+            ThumbnailOverlays(video, isFavorite, nowMs, showQuality = true, inset = 8.dp)
         }
         Row(
-            modifier = Modifier.padding(top = 8.dp),
-            verticalAlignment = Alignment.Bottom,
+            modifier = Modifier.padding(top = 10.dp),
+            verticalAlignment = Alignment.Top,
         ) {
             Column(
                 Modifier
                     .weight(1f)
-                    .padding(start = 2.dp, bottom = 2.dp),
+                    .padding(start = 2.dp, end = 2.dp),
             ) {
                 Text(
                     text = video.title,
@@ -92,23 +120,36 @@ fun VideoGridItem(
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Spacer(Modifier.height(2.dp))
+                Spacer(Modifier.height(3.dp))
                 Text(
-                    text = Formatters.fileSize(video.sizeBytes),
+                    text = metadataLine(video, nowMs, includeResolution = false),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                 )
             }
-            onMenuAction?.let { VideoMoreMenu(isFavorite = isFavorite, onAction = it) }
+            onMenuAction?.let {
+                VideoMoreMenu(isFavorite = isFavorite, onAction = it, modifier = Modifier.offset(x = 6.dp, y = (-4).dp))
+            }
         }
     }
 }
+
+/** `1080p · 1.2 GB · Yesterday`, skipping anything unknown. */
+private fun metadataLine(video: Video, nowMs: Long, includeResolution: Boolean): String =
+    listOfNotNull(
+        if (includeResolution) Formatters.qualityLabel(video.width, video.height) else null,
+        Formatters.fileSize(video.sizeBytes).takeIf { video.sizeBytes > 0 },
+        Formatters.relativeDate(video.dateAddedEpochMs, nowMs).takeIf { it.isNotEmpty() },
+    ).joinToString("  ·  ")
 
 /** Compact row for list layouts. The three-dot menu sits at the bottom right. */
 @Composable
 fun VideoListItem(
     video: Video,
     isFavorite: Boolean,
+    nowMs: Long,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onMenuAction: ((VideoMenuAction) -> Unit)? = null,
@@ -129,13 +170,8 @@ fun VideoListItem(
                     .width(132.dp)
                     .aspectRatio(16f / 10f),
             )
-            if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(4.dp))
-            if (video.durationMs > 0) {
-                ThumbnailBadge(
-                    Formatters.duration(video.durationMs),
-                    Modifier.align(Alignment.BottomEnd).padding(6.dp),
-                )
-            }
+            // Quality is in the text beside the thumbnail, so it isn't repeated on the image.
+            ThumbnailOverlays(video, isFavorite, nowMs, showQuality = false, inset = 6.dp)
         }
         Column(
             modifier = Modifier
@@ -151,10 +187,7 @@ fun VideoListItem(
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                text = listOfNotNull(
-                    Formatters.fileSize(video.sizeBytes),
-                    Formatters.resolution(video.width, video.height),
-                ).joinToString("  ·  "),
+                text = metadataLine(video, nowMs, includeResolution = true),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,

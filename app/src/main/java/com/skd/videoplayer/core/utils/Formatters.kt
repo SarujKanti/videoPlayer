@@ -6,6 +6,29 @@ import kotlin.math.pow
 
 object Formatters {
 
+    private const val DAY_MS = 24L * 60 * 60 * 1000
+
+    /**
+     * When a video was added, in the words people use: `Today`, `Yesterday`, `3 days ago`,
+     * `2 weeks ago`, then a plain date such as `12 Mar 2025` beyond a month.
+     */
+    fun relativeDate(epochMs: Long, nowMs: Long, locale: Locale = Locale.getDefault()): String {
+        if (epochMs <= 0) return ""
+        val days = ((nowMs - epochMs).coerceAtLeast(0) / DAY_MS).toInt()
+        return when {
+            days == 0 -> "Today"
+            days == 1 -> "Yesterday"
+            days < 7 -> "$days days ago"
+            days < 14 -> "1 week ago"
+            days < 31 -> "${days / 7} weeks ago"
+            else -> java.text.SimpleDateFormat("d MMM yyyy", locale).format(java.util.Date(epochMs))
+        }
+    }
+
+    /** Added within the last two days; such videos get a "NEW" marker. */
+    fun isNew(epochMs: Long, nowMs: Long): Boolean =
+        epochMs > 0 && nowMs - epochMs in 0 until 2 * DAY_MS
+
     /** `1:05:09` for durations of an hour or more, otherwise `5:09`. */
     fun duration(durationMs: Long): String {
         val totalSeconds = (durationMs.coerceAtLeast(0) / 1000)

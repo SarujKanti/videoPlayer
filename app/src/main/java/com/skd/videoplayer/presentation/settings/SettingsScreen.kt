@@ -40,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.skd.videoplayer.domain.model.ThemeMode
+import com.skd.videoplayer.presentation.components.ScreenHeader
 
 private data class ThemeOption(
     val mode: ThemeMode,
@@ -60,38 +61,36 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    Column(
-        modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState()),
-    ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.headlineMedium,
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 16.dp),
-        )
-
-        SectionTitle("Appearance")
-        SettingsCard {
-            Column(Modifier.selectableGroup()) {
-                ThemeOptions.forEachIndexed { index, option ->
-                    if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
-                    ThemeRow(
-                        option = option,
-                        selected = state.themeMode == option.mode,
-                        onSelect = { viewModel.onThemeModeSelected(option.mode) },
-                    )
+    val scrollState = rememberScrollState()
+    Column(modifier.fillMaxSize()) {
+        ScreenHeader(title = "Settings", scrolled = scrollState.value > 0)
+        Column(
+            Modifier
+                .fillMaxSize()
+                .verticalScroll(scrollState)
+                .padding(top = 12.dp),
+        ) {
+            SectionTitle("Appearance")
+            SettingsCard {
+                Column(Modifier.selectableGroup()) {
+                    ThemeOptions.forEachIndexed { index, option ->
+                        if (index > 0) HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+                        ThemeRow(
+                            option = option,
+                            selected = state.themeMode == option.mode,
+                            onSelect = { viewModel.onThemeModeSelected(option.mode) },
+                        )
+                    }
                 }
             }
+    
+            Spacer(Modifier.height(24.dp))
+            SectionTitle("About")
+            SettingsCard {
+                AboutRow()
+            }
+            Spacer(Modifier.height(24.dp))
         }
-
-        Spacer(Modifier.height(24.dp))
-        SectionTitle("About")
-        SettingsCard {
-            AboutRow()
-        }
-        Spacer(Modifier.height(24.dp))
     }
 }
 

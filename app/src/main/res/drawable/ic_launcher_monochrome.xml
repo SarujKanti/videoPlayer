@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Single-colour version for Android 13+ themed icons. The system tints it, so only the shape
+    matters: the lens with the play symbol cut out, plus the halo ring.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:pathData="M23,54 a31,31 0 1,1 62,0 a31,31 0 1,1 -62,0 z"
+        android:strokeWidth="2.5"
+        android:strokeColor="#FFFFFFFF" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M30,54 a24,24 0 1,1 48,0 a24,24 0 1,1 -48,0 z M49,44.6 Q49,41.6 51.6,43.3 L65.1,52.3 Q67.6,54 65.1,55.7 L51.6,64.7 Q49,66.4 49,63.4 Z" />
+</vector>

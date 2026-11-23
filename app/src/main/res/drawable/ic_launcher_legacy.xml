@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Launcher icon for Android 7.x, which has no adaptive icons: a round graphite badge with the
+    mark scaled up to fill it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="48dp"
+    android:height="48dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path android:pathData="M2,54 a52,52 0 1,1 104,0 a52,52 0 1,1 -104,0 z">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="linear"
+                android:startX="10"
+                android:startY="10"
+                android:endX="98"
+                android:endY="98">
+                <item android:offset="0" android:color="#FF22252E" />
+                <item android:offset="1" android:color="#FF0B0C10" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <group
+        android:pivotX="54"
+        android:pivotY="54"
+        android:scaleX="1.4"
+        android:scaleY="1.4">
+        <path
+            android:pathData="M23,54 a31,31 0 1,1 62,0 a31,31 0 1,1 -62,0 z"
+            android:strokeWidth="2.5"
+            android:strokeColor="#59FFB45C" />
+        <path android:pathData="M30,54 a24,24 0 1,1 48,0 a24,24 0 1,1 -48,0 z">
+            <aapt:attr name="android:fillColor">
+                <gradient
+                    android:type="linear"
+                    android:startX="37"
+                    android:startY="37"
+                    android:endX="71"
+                    android:endY="71">
+                    <item android:offset="0" android:color="#FFFFCB80" />
+                    <item android:offset="1" android:color="#FFFF8F3A" />
+                </gradient>
+            </aapt:attr>
+        </path>
+        <path
+            android:fillColor="#FF2B1700"
+            android:pathData="M49,44.6 Q49,41.6 51.6,43.3 L65.1,52.3 Q67.6,54 65.1,55.7 L51.6,64.7 Q49,66.4 49,63.4 Z" />
+        <path
+            android:fillColor="#FF8FD6C9"
+            android:pathData="M73.4,32.1 a2.8,2.8 0 1,1 5.6,0 a2.8,2.8 0 1,1 -5.6,0 z" />
+    </group>
+</vector>

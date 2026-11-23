@@ -5,10 +5,24 @@
         <item name="android:windowBackground">@color/window_background</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
+        <!-- Dark icons on the light background; values-night flips this. -->
+        <item name="android:windowLightStatusBar">@bool/light_system_bars</item>
+    </style>
+
+    <!--
+        Launch theme. The splash library shows the Lumora mark on the app background (light or
+        dark with the phone), then switches to Theme.VideoPlayer once the first frame is ready.
+        On Android 12+ the system draws this itself; older versions get the same look.
+    -->
+    <style name="Theme.VideoPlayer.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/window_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.VideoPlayer</item>
     </style>
 
     <!-- Pure black behind the video so letterbox bars blend in. -->
     <style name="Theme.VideoPlayer.Player">
         <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowLightStatusBar">false</item>
     </style>
 </resources>

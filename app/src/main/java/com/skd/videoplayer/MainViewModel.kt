@@ -29,6 +29,9 @@ class MainViewModel @Inject constructor(
     val themeMode: StateFlow<ThemeMode?> =
         settingsRepository.themeMode.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** True once the first real frame can be drawn; the splash screen waits for this. */
+    val isReady: Boolean get() = themeMode.value != null
+
     /**
      * Favorites that are actually on the device, for the tab badge. Only collected once media
      * access is granted, so it never scans the library early.
