@@ -8,8 +8,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.unit.dp
-
-enum class ThemeMode { SYSTEM, LIGHT, DARK }
+import com.skd.videoplayer.domain.model.ThemeMode
 
 private val DarkColors = darkColorScheme(
     primary = DarkPalette.Primary,
@@ -77,19 +76,22 @@ private val LumoraShapes = Shapes(
     extraLarge = RoundedCornerShape(32.dp),
 )
 
-/** App theme. Dark is the default; dynamic colour is deliberately off to keep the app's identity. */
+/** Resolves the user's choice against the phone's current light/dark setting. */
+@Composable
+fun ThemeMode.isDark(): Boolean = when (this) {
+    ThemeMode.SYSTEM -> isSystemInDarkTheme()
+    ThemeMode.LIGHT -> false
+    ThemeMode.DARK -> true
+}
+
+/** App theme. Dynamic colour is deliberately off to keep the app's identity. */
 @Composable
 fun LumoraTheme(
-    themeMode: ThemeMode = ThemeMode.DARK,
+    darkTheme: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val dark = when (themeMode) {
-        ThemeMode.SYSTEM -> isSystemInDarkTheme()
-        ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
-    }
     MaterialTheme(
-        colorScheme = if (dark) DarkColors else LightColors,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = LumoraTypography,
         shapes = LumoraShapes,
         content = content,
