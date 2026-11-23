@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Folder
@@ -28,7 +29,9 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -40,7 +43,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.skd.videoplayer.core.utils.Formatters
 import com.skd.videoplayer.domain.model.VideoFolder
 import com.skd.videoplayer.presentation.components.ErrorState
-import com.skd.videoplayer.presentation.components.LoadingState
+import com.skd.videoplayer.presentation.components.ScreenHeader
+import com.skd.videoplayer.presentation.components.VideoSkeleton
+import com.skd.videoplayer.domain.model.LibraryLayout
 import com.skd.videoplayer.presentation.components.MessageState
 import com.skd.videoplayer.presentation.components.ScrollableStateContainer
 import com.skd.videoplayer.presentation.components.VideoThumbnailImage
@@ -55,22 +60,21 @@ fun FoldersScreen(
     viewModel: FoldersViewModel = hiltViewModel(),
 ) {
     val state by viewModel.uiState.collectAsStateWithLifecycle()
+    val gridState = rememberLazyGridState()
+    val scrolled by remember {
+        derivedStateOf { gridState.firstVisibleItemIndex > 0 || gridState.firstVisibleItemScrollOffset > 0 }
+    }
 
     Column(modifier.fillMaxSize()) {
-        Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp)) {
-            Text(
-                text = "Folders",
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            if (!state.isLoading && state.error == null) {
-                Text(
-                    text = if (state.folders.size == 1) "1 folder" else "${state.folders.size} folders",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-        }
+        ScreenHeader(
+            title = "Folders",
+            subtitle = if (!state.isLoading && state.error == null) {
+                if (state.folders.size == 1) "1 folder" else "${state.folders.size} folders"
+            } else {
+                null
+            },
+            scrolled = scrolled,
+        )
 
         PullToRefreshBox(
             isRefreshing = state.isRefreshing,
@@ -79,7 +83,7 @@ fun FoldersScreen(
         ) {
             val error = state.error
             when {
-                state.isLoading -> LoadingState()
+                state.isLoading -> VideoSkeleton(LibraryLayout.GRID)
                 error != null && state.folders.isEmpty() -> ScrollableStateContainer {
                     ErrorState(message = error.message, onRetry = viewModel::refresh)
                 }
@@ -92,7 +96,8 @@ fun FoldersScreen(
                 }
                 else -> LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 164.dp),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                    state = gridState,
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize(),
