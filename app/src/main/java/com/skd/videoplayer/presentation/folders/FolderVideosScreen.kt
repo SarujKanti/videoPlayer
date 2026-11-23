@@ -3,7 +3,9 @@ package com.skd.videoplayer.presentation.folders
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.unit.dp
+import com.skd.videoplayer.presentation.components.GlassIconButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -32,7 +34,7 @@ fun FolderVideosScreen(
         onRefresh = viewModel::refresh,
         modifier = modifier,
         navigationIcon = {
-            IconButton(onClick = onBack) {
+            GlassIconButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp)) {
                 Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Back")
             }
         },

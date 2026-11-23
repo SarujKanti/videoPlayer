@@ -6,7 +6,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FileOpen
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
+import com.skd.videoplayer.presentation.components.GlassIconButton
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -41,7 +41,7 @@ fun HomeScreen(
         // The queue is exactly what's on screen: same search, same order.
         onVideoClick = { video -> onPlay(state.videos.map { it.id }.toLongArray(), video.id) },
         actions = {
-            IconButton(onClick = { pickVideo.launch(arrayOf("video/*")) }) {
+            GlassIconButton(onClick = { pickVideo.launch(arrayOf("video/*")) }) {
                 Icon(Icons.Outlined.FileOpen, contentDescription = "Open a video file")
             }
         },
