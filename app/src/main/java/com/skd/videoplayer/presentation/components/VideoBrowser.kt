@@ -32,6 +32,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.skd.videoplayer.domain.model.LibraryLayout
@@ -55,6 +56,9 @@ fun VideoBrowser(
     navigationIcon: (@Composable () -> Unit)? = null,
     emptyTitle: String = "No videos yet",
     emptyMessage: String = "Videos you record or download will appear here automatically.",
+    emptyIcon: ImageVector = Icons.Outlined.VideoLibrary,
+    emptyActionLabel: String? = null,
+    onEmptyAction: (() -> Unit)? = null,
     onVideoClick: ((Video) -> Unit)? = null,
     /** Extra header buttons, shown before the layout and sort buttons. */
     actions: @Composable () -> Unit = {},
@@ -110,9 +114,11 @@ fun VideoBrowser(
                     }
                     state.totalCount == 0 -> ScrollableStateContainer {
                         MessageState(
-                            icon = Icons.Outlined.VideoLibrary,
+                            icon = emptyIcon,
                             title = emptyTitle,
                             message = emptyMessage,
+                            actionLabel = emptyActionLabel,
+                            onAction = onEmptyAction,
                         )
                     }
                     state.videos.isEmpty() -> ScrollableStateContainer {
