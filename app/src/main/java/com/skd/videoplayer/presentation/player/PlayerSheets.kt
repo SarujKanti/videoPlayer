@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Check
@@ -21,6 +22,9 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import com.skd.videoplayer.presentation.components.glass
+import com.skd.videoplayer.presentation.components.glassColors
 import androidx.compose.ui.unit.dp
 
 enum class PlayerSheet(val title: String) {
@@ -60,10 +64,18 @@ fun PlayerOptionsSheet(
             }
     }
 
+    // Sheets sit over moving video with no blur, so the frost is kept mostly opaque.
+    val sheetColors = glassColors(solid = true).let {
+        it.copy(fillTop = it.fillTop.copy(alpha = 0.86f), fillBottom = it.fillBottom.copy(alpha = 0.86f))
+    }
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        shape = sheetShape,
+        containerColor = Color.Transparent,
+        tonalElevation = 0.dp,
+        modifier = Modifier.glass(sheetShape, sheetColors),
     ) {
         Column(
             Modifier

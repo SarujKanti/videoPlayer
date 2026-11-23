@@ -59,6 +59,9 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.skd.videoplayer.core.utils.Formatters
+import com.skd.videoplayer.presentation.components.GlassTone
+import com.skd.videoplayer.presentation.components.glass
+import com.skd.videoplayer.presentation.components.glassColors
 import kotlinx.coroutines.delay
 import kotlin.math.abs
 import kotlin.math.min
@@ -261,7 +264,8 @@ fun PlayerScreen(
                         controlsVisible = true
                     },
                     shape = CircleShape,
-                    color = Color.White.copy(alpha = 0.15f),
+                    color = Color.Transparent,
+                    modifier = Modifier.glass(CircleShape, glassColors(GlassTone.OnMedia)),
                     contentColor = Color.White,
                 ) {
                     Row(Modifier.padding(horizontal = 18.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -419,9 +423,10 @@ private fun DoubleTapIndicator(zone: TapZone?) {
 @Composable
 private fun FeedbackPill(feedback: GestureFeedback, modifier: Modifier = Modifier) {
     Surface(
-        modifier = modifier,
+        modifier = modifier.glass(RoundedCornerShape(20.dp), glassColors(GlassTone.OnMedia)),
         shape = RoundedCornerShape(20.dp),
-        color = Color.Black.copy(alpha = 0.65f),
+        // Extra darkening on top of the smoked glass for longer text.
+        color = Color.Black.copy(alpha = 0.25f),
         contentColor = Color.White,
     ) {
         when (feedback) {
