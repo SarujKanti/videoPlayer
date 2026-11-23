@@ -6,7 +6,6 @@ import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.SnackbarHostState
@@ -69,7 +68,7 @@ fun VideoActionsHost(
     }
 
     when (dialog) {
-        is VideoDialog.ConfirmDelete -> AlertDialog(
+        is VideoDialog.ConfirmDelete -> GlassDialog(
             onDismissRequest = viewModel::dismissDialog,
             title = { Text("Delete video?") },
             text = { Text("“${dialog.video.displayName}” will be permanently removed from this device.") },
@@ -104,7 +103,7 @@ private fun RenameDialog(
     val focusRequester = remember { FocusRequester() }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
 
-    AlertDialog(
+    GlassDialog(
         onDismissRequest = onDismiss,
         title = { Text("Rename video") },
         text = {
