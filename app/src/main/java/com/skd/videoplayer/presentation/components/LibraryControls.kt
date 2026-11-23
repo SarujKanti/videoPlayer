@@ -13,7 +13,6 @@ import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -78,7 +77,7 @@ fun VideoSearchField(
 
 @Composable
 fun LayoutToggleButton(layout: LibraryLayout, onLayoutChange: (LibraryLayout) -> Unit) {
-    IconButton(
+    GlassIconButton(
         onClick = {
             onLayoutChange(if (layout == LibraryLayout.GRID) LibraryLayout.LIST else LibraryLayout.GRID)
         },
@@ -103,10 +102,10 @@ val SortField.label: String
 fun SortMenuButton(sort: VideoSort, onSortChange: (VideoSort) -> Unit) {
     var expanded by remember { mutableStateOf(false) }
     Box {
-        IconButton(onClick = { expanded = true }) {
+        GlassIconButton(onClick = { expanded = true }) {
             Icon(Icons.AutoMirrored.Outlined.Sort, contentDescription = "Sort videos")
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        GlassDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             SortField.entries.forEach { field ->
                 SortMenuItem(
                     label = field.label,

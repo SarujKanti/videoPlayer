@@ -20,11 +20,9 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.DriveFileRenameOutline
 import androidx.compose.material.icons.outlined.FavoriteBorder
 import androidx.compose.material.icons.outlined.MoreVert
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -186,7 +184,7 @@ fun VideoMoreMenu(
 ) {
     var expanded by remember { mutableStateOf(false) }
     Box(modifier) {
-        IconButton(onClick = { expanded = true }, modifier = Modifier.size(36.dp)) {
+        GlassIconButton(onClick = { expanded = true }, size = 32.dp) {
             Icon(
                 Icons.Outlined.MoreVert,
                 contentDescription = "More options",
@@ -194,7 +192,7 @@ fun VideoMoreMenu(
                 modifier = Modifier.size(20.dp),
             )
         }
-        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+        GlassDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
             fun pick(action: VideoMenuAction) {
                 expanded = false
                 onAction(action)
