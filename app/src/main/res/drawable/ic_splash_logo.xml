@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Splash icon: an amber play mark inside a thin ring. Drawn on the 108dp adaptive-icon grid
+    with the artwork kept inside the central 72dp so the system mask never clips it.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#00000000"
+        android:pathData="M54,30a24,24 0,1 1,0 48a24,24 0,1 1,0 -48z"
+        android:strokeWidth="3"
+        android:strokeColor="@color/splash_icon_accent" />
+    <path
+        android:fillColor="@color/splash_icon_accent"
+        android:pathData="M48,42.5L48,65.5C48,66.7 49.3,67.4 50.3,66.8L67.6,55.3C68.5,54.7 68.5,53.3 67.6,52.7L50.3,41.2C49.3,40.6 48,41.3 48,42.5z" />
+</vector>

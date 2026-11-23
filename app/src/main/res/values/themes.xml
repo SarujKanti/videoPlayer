@@ -7,6 +7,18 @@
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
 
+    <!--
+        Launch theme for MainActivity. core-splashscreen backports the Android 12 splash API, so
+        this works from minSdk 24. installSplashScreen() swaps in postSplashScreenTheme.
+    -->
+    <style name="Theme.VideoPlayer.Starting" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_splash_logo</item>
+        <!-- Only applied on Android 12+; older versions draw the icon without a disc. -->
+        <item name="windowSplashScreenIconBackgroundColor">@color/splash_icon_background</item>
+        <item name="postSplashScreenTheme">@style/Theme.VideoPlayer</item>
+    </style>
+
     <!-- Pure black behind the video so letterbox bars blend in. -->
     <style name="Theme.VideoPlayer.Player">
         <item name="android:windowBackground">@android:color/black</item>

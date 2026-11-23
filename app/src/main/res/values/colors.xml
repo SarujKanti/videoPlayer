@@ -2,4 +2,14 @@
 <resources>
     <!-- Matches the light theme background so the first frame doesn't flash. -->
     <color name="window_background">#FFF7F6F3</color>
+
+    <!--
+        Splash screen, light mode: same as the app background so the hand-off to Compose is
+        seamless. values-night holds the dark versions.
+    -->
+    <color name="splash_background">#FFF7F6F3</color>
+    <!-- Lumora amber, matching LightPalette.Primary for contrast on the light background. -->
+    <color name="splash_icon_accent">#FFA85800</color>
+    <!-- Disc behind the icon on Android 12+, one step up from the background (Surface). -->
+    <color name="splash_icon_background">#FFECEAE5</color>
 </resources>
