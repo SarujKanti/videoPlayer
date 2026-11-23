@@ -48,7 +48,13 @@ data class PlayerUiState(
     val videoUnsupported: Boolean = false,
     val audioUnsupported: Boolean = false,
     val error: PlaybackErrorKind? = null,
+    /** Set while asking whether to continue from the last position or start over. */
+    val resumePrompt: ResumePrompt? = null,
 ) {
     val hasVideoSize: Boolean get() = videoWidth > 0 && videoHeight > 0
     val isLandscapeVideo: Boolean get() = !hasVideoSize || videoWidth >= videoHeight
 }
+
+/** Where the video was left last time, offered when it is opened again. */
+@Immutable
+data class ResumePrompt(val positionMs: Long, val durationMs: Long)
