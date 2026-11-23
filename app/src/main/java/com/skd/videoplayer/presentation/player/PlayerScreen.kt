@@ -329,6 +329,14 @@ fun PlayerScreen(
             onDismiss = { sheet = null },
         )
     }
+
+    state.resumePrompt?.takeIf { !isInPip }?.let { prompt ->
+        ResumeDialog(
+            prompt = prompt,
+            onResume = viewModel::resumeFromSavedPosition,
+            onStartOver = viewModel::startFromBeginning,
+        )
+    }
 }
 
 @OptIn(UnstableApi::class)
