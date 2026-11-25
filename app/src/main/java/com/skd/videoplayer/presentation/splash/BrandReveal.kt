@@ -72,3 +72,29 @@ class SplashIconBounds(
     val snapshot: ImageBitmap?,
     val visibleRadiusPx: Float,
 )
+
+/*
+ * Timeline, as fractions of TOTAL_MS. One Animatable drives everything, and every value is read
+ * inside graphicsLayer / draw lambdas, so the animation never recomposes: each frame is only a
+ * redraw of a handful of layers.
+ */
+private const val TOTAL_MS = 1_250
+private val LOGO = 0.00f..0.36f
+private const val LETTERS_START = 0.16f
+private const val LETTER_STAGGER = 0.045f
+private const val LETTER_LENGTH = 0.28f
+private val TAGLINE = 0.46f..0.70f
+private val SHIMMER = 0.50f..0.82f
+private val EXIT = 0.84f..1.00f
+
+/** Material's emphasized-decelerate curve: quick start, long soft landing. */
+private val EmphasizedDecelerate: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EmphasizedAccelerate: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+
+/** Progress of [range] at overall progress [p], clamped to 0..1 and eased. */
+private fun phase(p: Float, range: ClosedFloatingPointRange<Float>, easing: Easing = EmphasizedDecelerate): Float =
+    easing.transform(((p - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f))
+
+private val LogoLift = 64.dp
+private const val LOGO_END_SCALE = 0.8f
+private val LetterRise = 14.dp
