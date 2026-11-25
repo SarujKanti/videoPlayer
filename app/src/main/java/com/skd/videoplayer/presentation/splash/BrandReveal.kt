@@ -177,7 +177,29 @@ fun BrandReveal(
                 .offset { IntOffset(0, wordmarkTopPx.roundToInt()) },
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Row {
+            Row(
+                modifier = Modifier
+                    // Offscreen so the sweep below only tints the letters, not the background.
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        val sweep = phase(progress.value, SHIMMER, LinearEasing)
+                        if (sweep > 0f && sweep < 1f) {
+                            val band = size.width * 0.25f
+                            val x = -band + (size.width + band * 2) * sweep
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    0f to Color.Transparent,
+                                    0.5f to accent,
+                                    1f to Color.Transparent,
+                                    start = Offset(x - band, 0f),
+                                    end = Offset(x + band, size.height),
+                                ),
+                                blendMode = BlendMode.SrcAtop,
+                            )
+                        }
+                    },
+            ) {
                 appName.forEachIndexed { index, letter ->
                     val from = LETTERS_START + index * LETTER_STAGGER
                     val range = from..(from + LETTER_LENGTH)
