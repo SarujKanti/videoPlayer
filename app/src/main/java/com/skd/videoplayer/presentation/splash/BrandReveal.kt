@@ -1,0 +1,259 @@
+package com.skd.videoplayer.presentation.splash
+
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.CubicBezierEasing
+import androidx.compose.animation.core.Easing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.skd.videoplayer.R
+import kotlin.math.max
+import kotlin.math.roundToInt
+
+/**
+ * Where the system splash drew its icon, in window pixels, so the reveal can start from exactly
+ * that spot and the hand-over is invisible.
+ *
+ * Each Android version and device draws the splash icon at its own size, with or without a round
+ * backdrop, so the reveal copies what was actually drawn rather than guessing.
+ *
+ * @param snapshot a copy of the system's icon, or null to draw the logo resource instead.
+ * @param visibleRadiusPx how far the visible mark reaches from the centre, used to place the name.
+ */
+@Immutable
+class SplashIconBounds(
+    val centerX: Int,
+    val centerY: Int,
+    val sizePx: Int,
+    val snapshot: ImageBitmap?,
+    val visibleRadiusPx: Float,
+)
+
+/*
+ * Timeline, as fractions of TOTAL_MS. One Animatable drives everything, and every value is read
+ * inside graphicsLayer / draw lambdas, so the animation never recomposes: each frame is only a
+ * redraw of a handful of layers.
+ */
+private const val TOTAL_MS = 1_250
+private val LOGO = 0.00f..0.36f
+private const val LETTERS_START = 0.16f
+private const val LETTER_STAGGER = 0.045f
+private const val LETTER_LENGTH = 0.28f
+private val TAGLINE = 0.46f..0.70f
+private val SHIMMER = 0.50f..0.82f
+private val EXIT = 0.84f..1.00f
+
+/** Material's emphasized-decelerate curve: quick start, long soft landing. */
+private val EmphasizedDecelerate: Easing = CubicBezierEasing(0.05f, 0.7f, 0.1f, 1f)
+private val EmphasizedAccelerate: Easing = CubicBezierEasing(0.3f, 0f, 0.8f, 0.15f)
+
+/** Progress of [range] at overall progress [p], clamped to 0..1 and eased. */
+private fun phase(p: Float, range: ClosedFloatingPointRange<Float>, easing: Easing = EmphasizedDecelerate): Float =
+    easing.transform(((p - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f))
+
+private val LogoLift = 64.dp
+private const val LOGO_END_SCALE = 0.8f
+private val LetterRise = 14.dp
+
+/**
+ * Brand intro that continues the system splash: the logo glides up and settles, "Lumora" rises in
+ * letter by letter, a light sweep crosses the name, then the whole layer fades into the app.
+ * Tapping skips straight to the fade.
+ *
+ * @param onFirstFrame called once this overlay is on screen, so the system splash can be removed
+ *   underneath it without a flicker.
+ */
+@Composable
+fun BrandReveal(
+    start: SplashIconBounds,
+    onFirstFrame: () -> Unit,
+    onFinished: () -> Unit,
+) {
+    val progress = remember { Animatable(0f) }
+    var skip by remember { mutableStateOf(false) }
+    val firstFrame by rememberUpdatedState(onFirstFrame)
+    val finished by rememberUpdatedState(onFinished)
+
+    LaunchedEffect(skip) {
+        if (!skip) {
+            // Two frames: the first composes and draws this layer, the second confirms it's shown.
+            withFrameNanos { }
+            withFrameNanos { }
+            firstFrame()
+            progress.animateTo(1f, tween(TOTAL_MS, easing = LinearEasing))
+        } else {
+            firstFrame()
+            progress.snapTo(max(progress.value, EXIT.start))
+            val remaining = ((1f - progress.value) * TOTAL_MS).roundToInt()
+            progress.animateTo(1f, tween(remaining, easing = LinearEasing))
+        }
+        finished()
+    }
+
+    val background = colorResource(R.color.splash_background)
+    val accent = colorResource(R.color.splash_icon_accent)
+    val dark = background.luminance() < 0.5f
+    val nameColor = if (dark) Color(0xFFECEDF2) else Color(0xFF1A1B1F)
+    val taglineColor = if (dark) Color(0xFF9DA1AD) else Color(0xFF5A5E69)
+    val appName = stringResource(R.string.app_name)
+    val tagline = stringResource(R.string.splash_tagline)
+
+    val density = LocalDensity.current
+    val liftPx = with(density) { LogoLift.toPx() }
+    val riseShiftPx = with(density) { LetterRise.toPx() }
+    val iconSize = with(density) { start.sizePx.toDp() }
+    // The name sits just under the settled logo, measured from the visible edge of the mark.
+    val wordmarkTopPx = start.centerY - liftPx + start.visibleRadiusPx * LOGO_END_SCALE + with(density) { 24.dp.toPx() }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .semantics { contentDescription = appName }
+            .graphicsLayer {
+                val exit = phase(progress.value, EXIT, EmphasizedAccelerate)
+                alpha = 1f - exit
+                scaleX = 1f + 0.04f * exit
+                scaleY = 1f + 0.04f * exit
+            }
+            .background(background)
+            .pointerInput(Unit) { detectTapGestures { skip = true } },
+    ) {
+        // Logo, starting exactly where the system splash left it.
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(start.centerX - start.sizePx / 2, start.centerY - start.sizePx / 2) }
+                .size(iconSize)
+                .graphicsLayer {
+                    val move = phase(progress.value, LOGO)
+                    translationY = -liftPx * move
+                    val scale = 1f - (1f - LOGO_END_SCALE) * move
+                    scaleX = scale
+                    scaleY = scale
+                },
+            contentAlignment = Alignment.Center,
+        ) {
+            if (start.snapshot != null) {
+                Image(bitmap = start.snapshot, contentDescription = null, modifier = Modifier.size(iconSize))
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.ic_splash_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(iconSize),
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(0, wordmarkTopPx.roundToInt()) },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row(
+                modifier = Modifier
+                    // Offscreen so the sweep below only tints the letters, not the background.
+                    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+                    .drawWithContent {
+                        drawContent()
+                        val sweep = phase(progress.value, SHIMMER, LinearEasing)
+                        if (sweep > 0f && sweep < 1f) {
+                            val band = size.width * 0.25f
+                            val x = -band + (size.width + band * 2) * sweep
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    0f to Color.Transparent,
+                                    0.5f to accent,
+                                    1f to Color.Transparent,
+                                    start = Offset(x - band, 0f),
+                                    end = Offset(x + band, size.height),
+                                ),
+                                blendMode = BlendMode.SrcAtop,
+                            )
+                        }
+                    },
+            ) {
+                appName.forEachIndexed { index, letter ->
+                    val from = LETTERS_START + index * LETTER_STAGGER
+                    val range = from..(from + LETTER_LENGTH)
+                    Text(
+                        text = letter.toString(),
+                        style = WordmarkStyle,
+                        color = nameColor,
+                        modifier = Modifier.graphicsLayer {
+                            val t = phase(progress.value, range)
+                            alpha = t
+                            translationY = riseShiftPx * (1f - t)
+                        },
+                    )
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = tagline.uppercase(),
+                style = TaglineStyle,
+                color = taglineColor,
+                modifier = Modifier.graphicsLayer {
+                    val t = phase(progress.value, TAGLINE)
+                    alpha = t
+                    translationY = riseShiftPx * 0.6f * (1f - t)
+                },
+            )
+        }
+    }
+}
+
+private val WordmarkStyle = TextStyle(
+    fontSize = 42.sp,
+    fontWeight = FontWeight.Bold,
+    letterSpacing = 1.sp,
+)
+
+private val TaglineStyle = TextStyle(
+    fontSize = 12.sp,
+    fontWeight = FontWeight.Medium,
+    letterSpacing = 3.sp,
+)
