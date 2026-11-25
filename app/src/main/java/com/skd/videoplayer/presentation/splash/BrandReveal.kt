@@ -131,6 +131,7 @@ fun BrandReveal(
     val dark = background.luminance() < 0.5f
 
     val density = LocalDensity.current
+    val liftPx = with(density) { LogoLift.toPx() }
     val iconSize = with(density) { start.sizePx.toDp() }
 
     Box(
@@ -143,6 +144,13 @@ fun BrandReveal(
             modifier = Modifier
                 .offset { IntOffset(start.centerX - start.sizePx / 2, start.centerY - start.sizePx / 2) }
                 .size(iconSize)
+                .graphicsLayer {
+                    val move = phase(progress.value, LOGO)
+                    translationY = -liftPx * move
+                    val scale = 1f - (1f - LOGO_END_SCALE) * move
+                    scaleX = scale
+                    scaleY = scale
+                },
             contentAlignment = Alignment.Center,
         ) {
             if (start.snapshot != null) {
