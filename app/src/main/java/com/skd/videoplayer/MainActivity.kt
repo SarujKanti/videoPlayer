@@ -1,29 +1,39 @@
 package com.skd.videoplayer
 
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
 import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
+import android.provider.Settings
 import android.view.animation.AccelerateInterpolator
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.core.content.ContextCompat
+import androidx.core.view.drawToBitmap
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.core.splashscreen.SplashScreenViewProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.skd.videoplayer.core.utils.MediaAccess
 import com.skd.videoplayer.core.utils.MediaPermissions
 import com.skd.videoplayer.domain.model.ThemeMode
 import com.skd.videoplayer.navigation.AppNavigation
 import com.skd.videoplayer.presentation.components.MediaPermissionGate
+import com.skd.videoplayer.presentation.splash.BrandReveal
+import com.skd.videoplayer.presentation.splash.SplashIconBounds
 import com.skd.videoplayer.presentation.theme.LumoraTheme
 import com.skd.videoplayer.presentation.theme.isDark
 import dagger.hilt.android.AndroidEntryPoint
@@ -77,17 +87,41 @@ class MainActivity : ComponentActivity() {
                 onDispose { }
             }
 
-            LumoraTheme(darkTheme = darkTheme) {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background,
-                ) {
-                    MediaPermissionGate(onAccessChanged = viewModel::onMediaAccessChanged) { access ->
-                        AppNavigation(mediaAccess = access)
+            Box(Modifier.fillMaxSize()) {
+                // The app composes underneath while the reveal plays, so it's ready when it fades.
+                LumoraTheme(darkTheme = darkTheme) {
+                    Surface(
+                        modifier = Modifier.fillMaxSize(),
+                        color = MaterialTheme.colorScheme.background,
+                    ) {
+                        MediaPermissionGate(onAccessChanged = viewModel::onMediaAccessChanged) { access ->
+                            AppNavigation(mediaAccess = access)
+                        }
                     }
+                }
+                brandReveal?.let { start ->
+                    BrandReveal(
+                        start = start,
+                        onFirstFrame = ::removeSystemSplash,
+                        onFinished = { brandReveal = null },
+                    )
                 }
             }
         }
+    }
+
+    /** The system splash, kept until the brand reveal has drawn its first frame on top of it. */
+    private var splashProvider: SplashScreenViewProvider? = null
+
+    /** Set while the brand reveal is playing. Not saved: after rotation the app shows directly. */
+    private var brandReveal by mutableStateOf<SplashIconBounds?>(null)
+
+    private fun removeSystemSplash() {
+        val provider = splashProvider ?: return
+        splashProvider = null
+        provider.remove()
+        // Removing the splash re-applies the window theme, which resets the bar icon colour.
+        applySystemBarStyle(darkSystemBars)
     }
 
     /** Light icons on a dark theme, dark icons on a light one. */
