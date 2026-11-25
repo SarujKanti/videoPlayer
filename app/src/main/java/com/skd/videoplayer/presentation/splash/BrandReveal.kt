@@ -152,6 +152,7 @@ fun BrandReveal(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .semantics { contentDescription = appName }
             .graphicsLayer {
                 val exit = phase(progress.value, EXIT, EmphasizedAccelerate)
                 alpha = 1f - exit
