@@ -98,3 +98,56 @@ private fun phase(p: Float, range: ClosedFloatingPointRange<Float>, easing: Easi
 private val LogoLift = 64.dp
 private const val LOGO_END_SCALE = 0.8f
 private val LetterRise = 14.dp
+
+/**
+ * Brand intro that continues the system splash: the logo glides up and settles, "Lumora" rises in
+ * letter by letter, a light sweep crosses the name, then the whole layer fades into the app.
+ * Tapping skips straight to the fade.
+ *
+ * @param onFirstFrame called once this overlay is on screen, so the system splash can be removed
+ *   underneath it without a flicker.
+ */
+@Composable
+fun BrandReveal(
+    start: SplashIconBounds,
+    onFirstFrame: () -> Unit,
+    onFinished: () -> Unit,
+) {
+    val progress = remember { Animatable(0f) }
+    val firstFrame by rememberUpdatedState(onFirstFrame)
+    val finished by rememberUpdatedState(onFinished)
+
+    LaunchedEffect(Unit) {
+        // Two frames: the first composes and draws this layer, the second confirms it's shown.
+        withFrameNanos { }
+        withFrameNanos { }
+        firstFrame()
+        progress.animateTo(1f, tween(TOTAL_MS, easing = LinearEasing))
+        finished()
+    }
+
+    val background = colorResource(R.color.splash_background)
+    val accent = colorResource(R.color.splash_icon_accent)
+    val dark = background.luminance() < 0.5f
+
+    val density = LocalDensity.current
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(background)
+    ) {
+    }
+}
+
+private val WordmarkStyle = TextStyle(
+    fontSize = 42.sp,
+    fontWeight = FontWeight.Bold,
+    letterSpacing = 1.sp,
+)
+
+private val TaglineStyle = TextStyle(
+    fontSize = 12.sp,
+    fontWeight = FontWeight.Medium,
+    letterSpacing = 3.sp,
+)
