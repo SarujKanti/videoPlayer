@@ -130,7 +130,9 @@ fun BrandReveal(
     val accent = colorResource(R.color.splash_icon_accent)
     val dark = background.luminance() < 0.5f
     val nameColor = if (dark) Color(0xFFECEDF2) else Color(0xFF1A1B1F)
+    val taglineColor = if (dark) Color(0xFF9DA1AD) else Color(0xFF5A5E69)
     val appName = stringResource(R.string.app_name)
+    val tagline = stringResource(R.string.splash_tagline)
 
     val density = LocalDensity.current
     val liftPx = with(density) { LogoLift.toPx() }
@@ -191,6 +193,17 @@ fun BrandReveal(
                     )
                 }
             }
+            Spacer(Modifier.height(10.dp))
+            Text(
+                text = tagline.uppercase(),
+                style = TaglineStyle,
+                color = taglineColor,
+                modifier = Modifier.graphicsLayer {
+                    val t = phase(progress.value, TAGLINE)
+                    alpha = t
+                    translationY = riseShiftPx * 0.6f * (1f - t)
+                },
+            )
         }
     }
 }
