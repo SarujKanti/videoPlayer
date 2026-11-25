@@ -131,12 +131,31 @@ fun BrandReveal(
     val dark = background.luminance() < 0.5f
 
     val density = LocalDensity.current
+    val iconSize = with(density) { start.sizePx.toDp() }
 
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(background)
     ) {
+        // Logo, starting exactly where the system splash left it.
+        Box(
+            modifier = Modifier
+                .offset { IntOffset(start.centerX - start.sizePx / 2, start.centerY - start.sizePx / 2) }
+                .size(iconSize)
+            contentAlignment = Alignment.Center,
+        ) {
+            if (start.snapshot != null) {
+                Image(bitmap = start.snapshot, contentDescription = null, modifier = Modifier.size(iconSize))
+            } else {
+                Image(
+                    painter = painterResource(R.drawable.ic_splash_logo),
+                    contentDescription = null,
+                    modifier = Modifier.size(iconSize),
+                )
+            }
+        }
+
     }
 }
 
