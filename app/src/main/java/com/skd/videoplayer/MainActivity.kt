@@ -57,19 +57,24 @@ class MainActivity : ComponentActivity() {
         splashScreen.setKeepOnScreenCondition {
             !viewModel.isReady.value || viewModel.themeMode.value == null
         }
-        // Fade the splash out instead of cutting straight to the first frame. Removing the splash
-        // re-applies the window theme, which resets the system bar icon colour, so the app's own
-        // choice is applied again afterwards.
+        // Hand over to the animated brand reveal, which starts with the logo exactly where the
+        // system drew it. With animations turned off (or no icon to measure) just fade out.
         splashScreen.setOnExitAnimationListener { provider ->
-            provider.view.animate()
-                .alpha(0f)
-                .setDuration(SPLASH_EXIT_DURATION_MS)
-                .setInterpolator(AccelerateInterpolator())
-                .withEndAction {
-                    provider.remove()
-                    applySystemBarStyle(darkSystemBars)
-                }
-                .start()
+            val bounds = if (animationsEnabled()) provider.iconBounds() else null
+            if (bounds != null) {
+                splashProvider = provider
+                brandReveal = bounds
+            } else {
+                provider.view.animate()
+                    .alpha(0f)
+                    .setDuration(SPLASH_EXIT_DURATION_MS)
+                    .setInterpolator(AccelerateInterpolator())
+                    .withEndAction {
+                        provider.remove()
+                        applySystemBarStyle(darkSystemBars)
+                    }
+                    .start()
+            }
         }
 
         enableEdgeToEdge()
@@ -153,6 +158,10 @@ class MainActivity : ComponentActivity() {
         }
         return null
     }
+
+    /** Respects "Remove animations" and a 0x animator scale in developer options. */
+    private fun animationsEnabled(): Boolean =
+        Settings.Global.getFloat(contentResolver, Settings.Global.ANIMATOR_DURATION_SCALE, 1f) > 0f
 
     /** Light icons on a dark theme, dark icons on a light one. */
     private fun applySystemBarStyle(darkTheme: Boolean) {
