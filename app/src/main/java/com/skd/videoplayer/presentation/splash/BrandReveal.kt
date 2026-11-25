@@ -114,15 +114,23 @@ fun BrandReveal(
     onFinished: () -> Unit,
 ) {
     val progress = remember { Animatable(0f) }
+    var skip by remember { mutableStateOf(false) }
     val firstFrame by rememberUpdatedState(onFirstFrame)
     val finished by rememberUpdatedState(onFinished)
 
-    LaunchedEffect(Unit) {
-        // Two frames: the first composes and draws this layer, the second confirms it's shown.
-        withFrameNanos { }
-        withFrameNanos { }
-        firstFrame()
-        progress.animateTo(1f, tween(TOTAL_MS, easing = LinearEasing))
+    LaunchedEffect(skip) {
+        if (!skip) {
+            // Two frames: the first composes and draws this layer, the second confirms it's shown.
+            withFrameNanos { }
+            withFrameNanos { }
+            firstFrame()
+            progress.animateTo(1f, tween(TOTAL_MS, easing = LinearEasing))
+        } else {
+            firstFrame()
+            progress.snapTo(max(progress.value, EXIT.start))
+            val remaining = ((1f - progress.value) * TOTAL_MS).roundToInt()
+            progress.animateTo(1f, tween(remaining, easing = LinearEasing))
+        }
         finished()
     }
 
@@ -151,6 +159,7 @@ fun BrandReveal(
                 scaleY = 1f + 0.04f * exit
             }
             .background(background)
+            .pointerInput(Unit) { detectTapGestures { skip = true } },
     ) {
         // Logo, starting exactly where the system splash left it.
         Box(
