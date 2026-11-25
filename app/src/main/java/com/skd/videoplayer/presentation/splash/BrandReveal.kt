@@ -144,6 +144,12 @@ fun BrandReveal(
     Box(
         modifier = Modifier
             .fillMaxSize()
+            .graphicsLayer {
+                val exit = phase(progress.value, EXIT, EmphasizedAccelerate)
+                alpha = 1f - exit
+                scaleX = 1f + 0.04f * exit
+                scaleY = 1f + 0.04f * exit
+            }
             .background(background)
     ) {
         // Logo, starting exactly where the system splash left it.
