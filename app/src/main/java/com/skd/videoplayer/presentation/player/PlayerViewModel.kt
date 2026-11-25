@@ -17,10 +17,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
 import com.skd.videoplayer.data.local.ContentUriMetadataReader
+import com.skd.videoplayer.di.ApplicationScope
+import com.skd.videoplayer.domain.model.PlaybackPosition
 import com.skd.videoplayer.domain.model.Video
+import com.skd.videoplayer.domain.repository.PlaybackPositionRepository
 import com.skd.videoplayer.domain.usecase.GetPlaybackQueueUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +45,8 @@ class PlayerViewModel @Inject constructor(
     @ApplicationContext context: Context,
     private val getPlaybackQueue: GetPlaybackQueueUseCase,
     private val uriMetadata: ContentUriMetadataReader,
+    private val playbackPositions: PlaybackPositionRepository,
+    @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
 
     val player: ExoPlayer = ExoPlayer.Builder(context)
@@ -80,14 +86,47 @@ class PlayerViewModel @Inject constructor(
         override fun onPlayerError(error: PlaybackException) {
             _uiState.update { it.copy(error = PlaybackErrorKind.fromErrorCode(error.errorCode), isLoading = false) }
         }
+
+        // Pausing, leaving the screen and losing audio focus all land here.
+        override fun onIsPlayingChanged(isPlaying: Boolean) {
+            if (!isPlaying) savePosition()
+        }
+
+        override fun onPlaybackStateChanged(playbackState: Int) {
+            if (playbackState == Player.STATE_ENDED) currentMediaKey?.let(::clearPosition)
+        }
+
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            // The previous video ran to its end (or looped), so it was watched in full.
+            val finished = reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
+                reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
+            if (finished) currentMediaKey?.let(::clearPosition)
+            currentMediaKey = mediaItem?.mediaId
+        }
     }
+
+    /** Media id of the video on screen, used as the key for its saved position. */
+    private var currentMediaKey: String? = null
+
+    /** Where the video being asked about was left, while the resume prompt is showing. */
+    private var pendingResume: Pair<String, PlaybackPosition>? = null
+
+    private var lastPeriodicSaveMs = 0L
 
     init {
         player.addListener(listener)
         // Position isn't pushed by the player, so poll it while playing.
         viewModelScope.launch {
             while (isActive) {
-                if (player.isPlaying) syncProgress()
+                if (player.isPlaying) {
+                    syncProgress()
+                    // Also save now and then, so a crash or a killed process loses little.
+                    val now = System.currentTimeMillis()
+                    if (now - lastPeriodicSaveMs >= PERIODIC_SAVE_INTERVAL_MS) {
+                        lastPeriodicSaveMs = now
+                        savePosition()
+                    }
+                }
                 delay(PROGRESS_INTERVAL_MS)
             }
         }
@@ -99,6 +138,9 @@ class PlayerViewModel @Inject constructor(
      */
     fun open(request: PlayerRequest, replace: Boolean = false) {
         if (!replace && player.mediaItemCount > 0) return
+        // A new "open with" replaces the current video; remember where that one was left.
+        if (player.mediaItemCount > 0) savePosition()
+        pendingResume = null
         _uiState.update { PlayerUiState(isLoading = true, scaleMode = it.scaleMode) }
         viewModelScope.launch {
             val (items, startIndex) = when (request) {
@@ -112,11 +154,43 @@ class PlayerViewModel @Inject constructor(
                 _uiState.update { it.copy(isLoading = false, error = PlaybackErrorKind.EMPTY_QUEUE) }
                 return@launch
             }
+            val startKey = items[startIndex].mediaId
+            val saved = playbackPositions.get(startKey)
+            currentMediaKey = startKey
             player.setMediaItems(items, startIndex, C.TIME_UNSET)
             player.prepare()
-            player.playWhenReady = true
-            _uiState.update { it.copy(isLoading = false) }
+            if (saved == null) {
+                player.playWhenReady = true
+                _uiState.update { it.copy(isLoading = false) }
+            } else {
+                // Hold on the first frame until the user picks where to start.
+                pendingResume = startKey to saved
+                player.playWhenReady = false
+                _uiState.update {
+                    it.copy(isLoading = false, resumePrompt = ResumePrompt(saved.positionMs, saved.durationMs))
+                }
+            }
         }
+    }
+
+    /** Continues the video from where it was left last time. */
+    fun resumeFromSavedPosition() {
+        val (_, saved) = pendingResume ?: return
+        pendingResume = null
+        _uiState.update { it.copy(resumePrompt = null) }
+        player.seekTo(saved.positionMs)
+        player.play()
+        syncProgress()
+    }
+
+    /** Plays the video from the start and forgets the old position. */
+    fun startFromBeginning() {
+        val (key, _) = pendingResume ?: return
+        pendingResume = null
+        _uiState.update { it.copy(resumePrompt = null) }
+        clearPosition(key)
+        player.seekTo(0)
+        player.play()
     }
 
     fun togglePlayPause() {
@@ -142,9 +216,15 @@ class PlayerViewModel @Inject constructor(
 
     fun seekBy(deltaMs: Long) = seekTo(player.currentPosition + deltaMs)
 
-    fun previous() = player.seekToPrevious()
+    fun previous() {
+        savePosition()
+        player.seekToPrevious()
+    }
 
-    fun next() = player.seekToNext()
+    fun next() {
+        savePosition()
+        player.seekToNext()
+    }
 
     fun setSpeed(speed: Float) {
         player.playbackParameters = PlaybackParameters(speed)
@@ -260,7 +340,26 @@ class PlayerViewModel @Inject constructor(
             .setMediaMetadata(MediaMetadata.Builder().setTitle(title).build())
             .build()
 
+    /**
+     * Remembers where the current video is. Player values are read here on the main thread; the
+     * write runs on the app scope so it still finishes when the screen closes.
+     */
+    private fun savePosition() {
+        // While asking, the player sits at 0:00; saving that would wipe the spot being offered.
+        if (pendingResume != null) return
+        val key = currentMediaKey ?: return
+        if (player.playbackState == Player.STATE_ENDED || player.playbackState == Player.STATE_IDLE) return
+        val positionMs = player.currentPosition.coerceAtLeast(0)
+        val durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
+        appScope.launch { playbackPositions.save(key, positionMs, durationMs) }
+    }
+
+    private fun clearPosition(key: String) {
+        appScope.launch { playbackPositions.clear(key) }
+    }
+
     override fun onCleared() {
+        savePosition()
         player.removeListener(listener)
         player.release()
     }
@@ -268,5 +367,6 @@ class PlayerViewModel @Inject constructor(
     companion object {
         const val SEEK_STEP_MS = 10_000L
         private const val PROGRESS_INTERVAL_MS = 250L
+        private const val PERIODIC_SAVE_INTERVAL_MS = 5_000L
     }
 }

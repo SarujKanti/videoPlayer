@@ -40,8 +40,10 @@ import androidx.compose.material.icons.outlined.SkipPrevious
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
+import com.skd.videoplayer.presentation.components.GlassIconButton
+import com.skd.videoplayer.presentation.components.GlassTone
+import com.skd.videoplayer.presentation.components.glass
+import com.skd.videoplayer.presentation.components.glassColors
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Slider
@@ -144,7 +146,8 @@ private fun TopBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ControlIcon(Icons.AutoMirrored.Outlined.ArrowBack, "Close player", onClick = actions.onBack)
@@ -173,7 +176,7 @@ private fun TopBar(
         if (state.audioTracks.size > 1) {
             ControlIcon(Icons.Outlined.Audiotrack, "Audio track") { actions.onOpenSheet(PlayerSheet.AUDIO) }
         }
-        TextButton(onClick = { actions.onOpenSheet(PlayerSheet.SPEED) }) {
+        TextButton(onClick = { actions.onOpenSheet(PlayerSheet.SPEED) }, modifier = Modifier.glassPill()) {
             Text(
                 speedLabel(state.speed),
                 color = if (state.speed == 1f) ControlTint else MaterialTheme.colorScheme.primary,
@@ -195,7 +198,7 @@ private fun CenterControls(
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         ControlIcon(
             Icons.Outlined.SkipPrevious,
@@ -205,21 +208,18 @@ private fun CenterControls(
             onClick = actions.onPrevious,
         )
         ControlIcon(Icons.Outlined.Replay10, "Back 10 seconds", size = 34.dp, onClick = actions.onSeekBack)
-        Surface(
+        GlassIconButton(
             onClick = actions.onPlayPause,
-            shape = CircleShape,
-            color = Color.White.copy(alpha = 0.16f),
+            size = 76.dp,
+            tone = GlassTone.OnMedia,
             contentColor = ControlTint,
-            modifier = Modifier.size(76.dp),
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                val (icon, label) = when {
-                    state.isEnded -> Icons.Outlined.Replay to "Replay"
-                    state.isPlaying -> Icons.Outlined.Pause to "Pause"
-                    else -> Icons.Outlined.PlayArrow to "Play"
-                }
-                Icon(icon, contentDescription = label, modifier = Modifier.size(44.dp))
+            val (icon, label) = when {
+                state.isEnded -> Icons.Outlined.Replay to "Replay"
+                state.isPlaying -> Icons.Outlined.Pause to "Pause"
+                else -> Icons.Outlined.PlayArrow to "Play"
             }
+            Icon(icon, contentDescription = label, modifier = Modifier.size(44.dp))
         }
         ControlIcon(Icons.Outlined.Forward10, "Forward 10 seconds", size = 34.dp, onClick = actions.onSeekForward)
         ControlIcon(
@@ -294,8 +294,8 @@ private fun BottomBar(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             ControlIcon(Icons.Outlined.Lock, "Lock controls", onClick = actions.onLock)
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = actions.onCycleScale) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TextButton(onClick = actions.onCycleScale, modifier = Modifier.glassPill()) {
                     Icon(Icons.Outlined.AspectRatio, contentDescription = null, tint = ControlTint)
                     Spacer(Modifier.width(6.dp))
                     Text(state.scaleMode.label, color = ControlTint, style = MaterialTheme.typography.labelLarge)
@@ -351,18 +351,23 @@ private fun ControlIcon(
     tint: Color = ControlTint,
     onClick: () -> Unit,
 ) {
-    IconButton(
+    GlassIconButton(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.size(size + 24.dp),
-        colors = IconButtonDefaults.iconButtonColors(
-            contentColor = tint,
-            disabledContentColor = Color.White.copy(alpha = 0.3f),
-        ),
+        size = size + 18.dp,
+        tone = GlassTone.OnMedia,
+        contentColor = tint,
+        modifier = modifier,
     ) {
         Icon(icon, contentDescription = description, modifier = Modifier.size(size))
     }
 }
+
+/** Text controls (speed, scale) as glass pills to match the round icon buttons. */
+private val GlassPill = RoundedCornerShape(percent = 50)
+
+@Composable
+private fun Modifier.glassPill(): Modifier = glass(GlassPill, glassColors(GlassTone.OnMedia))
 
 @Composable
 fun PlaybackErrorOverlay(

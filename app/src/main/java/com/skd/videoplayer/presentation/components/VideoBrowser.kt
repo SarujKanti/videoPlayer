@@ -67,11 +67,15 @@ fun VideoBrowser(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = if (navigationIcon == null) 20.dp else 4.dp, end = 4.dp, top = 8.dp),
+                    .padding(start = if (navigationIcon == null) 20.dp else 4.dp, end = 16.dp, top = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 navigationIcon?.invoke()
-                Column(Modifier.weight(1f)) {
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .padding(start = if (navigationIcon == null) 0.dp else 12.dp, end = 8.dp),
+                ) {
                     Text(
                         text = title,
                         style = MaterialTheme.typography.headlineMedium,
@@ -87,9 +91,12 @@ fun VideoBrowser(
                         )
                     }
                 }
-                actions()
-                LayoutToggleButton(state.layout, onLayoutChange)
-                SortMenuButton(state.sort, onSortChange)
+                // Each glass button already sits in a 48dp touch target, which spaces them out.
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    actions()
+                    LayoutToggleButton(state.layout, onLayoutChange)
+                    SortMenuButton(state.sort, onSortChange)
+                }
             }
     
             VideoSearchField(

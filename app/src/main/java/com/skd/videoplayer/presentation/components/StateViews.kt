@@ -53,16 +53,10 @@ fun MessageState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(
-                    Brush.radialGradient(
-                        listOf(iconTint.copy(alpha = 0.22f), iconTint.copy(alpha = 0.0f)),
-                    ),
-                    CircleShape,
-                ),
-            contentAlignment = Alignment.Center,
+        GlassIconBadge(
+            modifier = Modifier.size(96.dp),
+            shape = CircleShape,
+            tint = iconTint,
         ) {
             Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(44.dp))
         }

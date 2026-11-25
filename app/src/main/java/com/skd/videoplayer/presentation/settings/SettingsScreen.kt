@@ -33,6 +33,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.skd.videoplayer.presentation.components.GlassIconBadge
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
@@ -172,19 +173,14 @@ private fun AboutRow() {
 
 @Composable
 private fun SettingIcon(icon: ImageVector, highlighted: Boolean) {
-    Box(
-        modifier = Modifier
-            .size(40.dp)
-            .background(
-                if (highlighted) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                RoundedCornerShape(12.dp),
-            ),
-        contentAlignment = Alignment.Center,
+    GlassIconBadge(
+        modifier = Modifier.size(40.dp),
+        tint = if (highlighted) MaterialTheme.colorScheme.primary else null,
     ) {
         Icon(
             icon,
             contentDescription = null,
-            tint = if (highlighted) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+            tint = if (highlighted) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(22.dp),
         )
     }
