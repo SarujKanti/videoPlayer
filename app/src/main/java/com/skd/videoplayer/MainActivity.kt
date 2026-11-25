@@ -124,6 +124,36 @@ class MainActivity : ComponentActivity() {
         applySystemBarStyle(darkSystemBars)
     }
 
+    private fun SplashScreenViewProvider.iconBounds(): SplashIconBounds? {
+        val icon = runCatching { iconView }.getOrNull() ?: return null
+        if (icon.width == 0 || icon.height == 0) return null
+        val location = IntArray(2)
+        icon.getLocationInWindow(location)
+        val size = minOf(icon.width, icon.height)
+        // Copy exactly what the system drew, backdrop and all. Some devices draw the icon on a
+        // separate surface, which copies as blank; then fall back to the logo resource.
+        val snapshot = runCatching { icon.drawToBitmap() }.getOrNull()
+        val radius = snapshot?.let(::visibleRadius)
+        return SplashIconBounds(
+            centerX = location[0] + icon.width / 2,
+            centerY = location[1] + icon.height / 2,
+            sizePx = size,
+            snapshot = snapshot?.takeIf { radius != null }?.asImageBitmap(),
+            // The logo's ring spans 48 of the 108 units of the icon grid.
+            visibleRadiusPx = radius ?: (size * 24f / 108f),
+        )
+    }
+
+    /** Distance from the centre to the first visible pixel along the middle row, or null if blank. */
+    private fun visibleRadius(bitmap: Bitmap): Float? {
+        val y = bitmap.height / 2
+        val centerX = bitmap.width / 2
+        for (x in 0 until centerX) {
+            if (Color.alpha(bitmap.getPixel(x, y)) > VISIBLE_ALPHA) return (centerX - x).toFloat()
+        }
+        return null
+    }
+
     /** Light icons on a dark theme, dark icons on a light one. */
     private fun applySystemBarStyle(darkTheme: Boolean) {
         val style = if (darkTheme) {
@@ -141,5 +171,6 @@ class MainActivity : ComponentActivity() {
 
     private companion object {
         const val SPLASH_EXIT_DURATION_MS = 250L
+        const val VISIBLE_ALPHA = 24
     }
 }
