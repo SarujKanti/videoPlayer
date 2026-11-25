@@ -129,10 +129,15 @@ fun BrandReveal(
     val background = colorResource(R.color.splash_background)
     val accent = colorResource(R.color.splash_icon_accent)
     val dark = background.luminance() < 0.5f
+    val nameColor = if (dark) Color(0xFFECEDF2) else Color(0xFF1A1B1F)
+    val appName = stringResource(R.string.app_name)
 
     val density = LocalDensity.current
     val liftPx = with(density) { LogoLift.toPx() }
+    val riseShiftPx = with(density) { LetterRise.toPx() }
     val iconSize = with(density) { start.sizePx.toDp() }
+    // The name sits just under the settled logo, measured from the visible edge of the mark.
+    val wordmarkTopPx = start.centerY - liftPx + start.visibleRadiusPx * LOGO_END_SCALE + with(density) { 24.dp.toPx() }
 
     Box(
         modifier = Modifier
@@ -164,6 +169,29 @@ fun BrandReveal(
             }
         }
 
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .offset { IntOffset(0, wordmarkTopPx.roundToInt()) },
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Row {
+                appName.forEachIndexed { index, letter ->
+                    val from = LETTERS_START + index * LETTER_STAGGER
+                    val range = from..(from + LETTER_LENGTH)
+                    Text(
+                        text = letter.toString(),
+                        style = WordmarkStyle,
+                        color = nameColor,
+                        modifier = Modifier.graphicsLayer {
+                            val t = phase(progress.value, range)
+                            alpha = t
+                            translationY = riseShiftPx * (1f - t)
+                        },
+                    )
+                }
+            }
+        }
     }
 }
 
