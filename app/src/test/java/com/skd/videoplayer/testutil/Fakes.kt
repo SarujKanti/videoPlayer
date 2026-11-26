@@ -5,6 +5,7 @@ import com.skd.videoplayer.domain.model.UserConsentRequest
 import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.model.VideoEditResult
 import com.skd.videoplayer.domain.repository.FavoritesRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import com.skd.videoplayer.domain.repository.SettingsRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
@@ -30,6 +31,14 @@ class FakeFavoritesRepository : FavoritesRepository {
     }
     override suspend fun remove(videoId: Long) {
         ids.value = ids.value - videoId
+    }
+}
+
+class FakeWatchedVideosRepository : WatchedVideosRepository {
+    val ids = MutableStateFlow<Set<Long>>(emptySet())
+    override fun observeWatchedIds(): Flow<Set<Long>> = ids
+    override suspend fun markWatched(videoId: Long) {
+        ids.value = ids.value + videoId
     }
 }
 
