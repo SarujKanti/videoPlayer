@@ -6,6 +6,7 @@ import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.repository.FavoritesRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import com.skd.videoplayer.domain.usecase.FilterAndSortVideosUseCase
 import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
 import com.skd.videoplayer.presentation.components.VideoListViewModel
@@ -20,13 +21,15 @@ import javax.inject.Inject
 class FolderVideosViewModel @Inject constructor(
     private val repository: VideoRepository,
     favoritesRepository: FavoritesRepository,
+    watchedVideosRepository: WatchedVideosRepository,
     editRepository: VideoEditRepository,
     filterAndSort: FilterAndSortVideosUseCase,
     validateName: ValidateVideoNameUseCase,
     @DefaultDispatcher computeDispatcher: CoroutineDispatcher,
     savedStateHandle: SavedStateHandle,
 ) : VideoListViewModel(
-    repository, favoritesRepository, editRepository, filterAndSort, validateName, computeDispatcher, savedStateHandle,
+    repository, favoritesRepository, watchedVideosRepository, editRepository, filterAndSort, validateName,
+    computeDispatcher, savedStateHandle,
 ) {
     // Type-safe navigation stores each route property under its own name.
     private val folderId: String = checkNotNull(savedStateHandle["folderId"])
