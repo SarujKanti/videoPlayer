@@ -173,6 +173,7 @@ private fun VideoCollection(
                 VideoGridItem(
                     video = video,
                     isFavorite = video.id in state.favoriteIds,
+                    isNew = state.isNew(video),
                     onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
@@ -188,6 +189,7 @@ private fun VideoCollection(
                 VideoListItem(
                     video = video,
                     isFavorite = video.id in state.favoriteIds,
+                    isNew = state.isNew(video),
                     onMenuAction = onMenuAction?.let { handler -> { action -> handler(video, action) } },
                     onClick = onVideoClick?.let { { it(video) } },
                     modifier = Modifier.animateItem(),
