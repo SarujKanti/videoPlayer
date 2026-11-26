@@ -104,6 +104,8 @@ class PlayerViewModel @Inject constructor(
                 reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
             if (finished) currentMediaKey?.let(::clearPosition)
             currentMediaKey = mediaItem?.mediaId
+            // Next/previous and auto-advance start a different video; it counts as played too.
+            markWatched(currentMediaKey)
         }
     }
 
