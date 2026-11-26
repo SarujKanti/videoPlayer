@@ -66,3 +66,6 @@ internal object LightPalette {
 
 /** Scrim drawn over thumbnails behind badges and text. */
 val ThumbnailScrim = Color(0xB3000000)
+
+/** Background of the "NEW" pill on unplayed videos. White text on it reads in light and dark themes. */
+val NewBadgeRed = Color(0xFFE53935)
