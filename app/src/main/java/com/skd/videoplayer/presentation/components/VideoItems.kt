@@ -117,6 +117,7 @@ fun VideoGridItem(
 fun VideoListItem(
     video: Video,
     isFavorite: Boolean,
+    isNew: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onMenuAction: ((VideoMenuAction) -> Unit)? = null,
@@ -137,6 +138,7 @@ fun VideoListItem(
                     .width(132.dp)
                     .aspectRatio(16f / 10f),
             )
+            if (isNew) NewBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
             if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(4.dp))
             if (video.durationMs > 0) {
                 ThumbnailBadge(
