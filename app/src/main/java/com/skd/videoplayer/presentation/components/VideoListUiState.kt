@@ -31,9 +31,14 @@ data class VideoListUiState(
     val sort: VideoSort = VideoSort.Default,
     val layout: LibraryLayout = LibraryLayout.GRID,
     val favoriteIds: Set<Long> = emptySet(),
+    /** Ids of videos played at least once; anything else in the library is "new". */
+    val watchedIds: Set<Long> = emptySet(),
     val dialog: VideoDialog? = null,
     val error: LibraryError? = null,
-)
+) {
+    /** True for a video the user has never played. */
+    fun isNew(video: Video): Boolean = video.id !in watchedIds
+}
 
 /** The user's current view choices, kept apart from the library data. */
 data class VideoListOptions(
@@ -47,10 +52,11 @@ data class VideoListOptions(
 fun Throwable.toLibraryError(): LibraryError =
     if (this is SecurityException) LibraryError.PERMISSION_REVOKED else LibraryError.UNKNOWN
 
-/** Builds [VideoListUiState] from a library result, the favorites and the view options. */
+/** Builds [VideoListUiState] from a library result, favorites, watched ids and the view options. */
 fun buildVideoListState(
     result: Result<List<Video>>,
     favoriteIds: Set<Long>,
+    watchedIds: Set<Long>,
     options: VideoListOptions,
     filterAndSort: FilterAndSortVideosUseCase,
 ): VideoListUiState {
@@ -64,6 +70,7 @@ fun buildVideoListState(
         sort = options.sort,
         layout = options.layout,
         favoriteIds = favoriteIds,
+        watchedIds = watchedIds,
         dialog = options.dialog,
         error = result.exceptionOrNull()?.toLibraryError(),
     )

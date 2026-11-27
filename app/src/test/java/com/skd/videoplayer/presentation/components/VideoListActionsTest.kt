@@ -9,6 +9,7 @@ import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
 import com.skd.videoplayer.presentation.home.HomeViewModel
 import com.skd.videoplayer.testutil.FakeConsent
 import com.skd.videoplayer.testutil.FakeFavoritesRepository
+import com.skd.videoplayer.testutil.FakeWatchedVideosRepository
 import com.skd.videoplayer.testutil.FakeVideoEditRepository
 import com.skd.videoplayer.testutil.FakeVideoRepository
 import com.skd.videoplayer.testutil.testVideo
@@ -57,6 +58,7 @@ class VideoListActionsTest {
         val viewModel = HomeViewModel(
             videos,
             favorites,
+            FakeWatchedVideosRepository(),
             edits,
             FilterAndSortVideosUseCase(),
             ValidateVideoNameUseCase(),

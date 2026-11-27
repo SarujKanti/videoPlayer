@@ -6,6 +6,7 @@ import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.repository.FavoritesRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import com.skd.videoplayer.domain.usecase.FilterAndSortVideosUseCase
 import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
 import com.skd.videoplayer.presentation.components.VideoListViewModel
@@ -19,13 +20,15 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: VideoRepository,
     favoritesRepository: FavoritesRepository,
+    watchedVideosRepository: WatchedVideosRepository,
     editRepository: VideoEditRepository,
     filterAndSort: FilterAndSortVideosUseCase,
     validateName: ValidateVideoNameUseCase,
     @DefaultDispatcher computeDispatcher: CoroutineDispatcher,
     savedStateHandle: SavedStateHandle,
 ) : VideoListViewModel(
-    repository, favoritesRepository, editRepository, filterAndSort, validateName, computeDispatcher, savedStateHandle,
+    repository, favoritesRepository, watchedVideosRepository, editRepository, filterAndSort, validateName,
+    computeDispatcher, savedStateHandle,
 ) {
     override fun source(): Flow<Result<List<Video>>> = repository.observeVideos()
 }

@@ -9,6 +9,7 @@ import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
 import com.skd.videoplayer.presentation.components.LibraryError
 import com.skd.videoplayer.presentation.components.VideoListUiState
 import com.skd.videoplayer.testutil.FakeFavoritesRepository
+import com.skd.videoplayer.testutil.FakeWatchedVideosRepository
 import com.skd.videoplayer.testutil.FakeVideoEditRepository
 import com.skd.videoplayer.testutil.FakeVideoRepository
 import com.skd.videoplayer.testutil.testVideo
@@ -46,6 +47,7 @@ class HomeViewModelTest {
         HomeViewModel(
             repository,
             FakeFavoritesRepository(),
+            FakeWatchedVideosRepository(),
             FakeVideoEditRepository(),
             FilterAndSortVideosUseCase(),
             ValidateVideoNameUseCase(),

@@ -12,6 +12,7 @@ import com.skd.videoplayer.domain.model.VideoSort
 import com.skd.videoplayer.domain.repository.FavoritesRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import com.skd.videoplayer.domain.usecase.FilterAndSortVideosUseCase
 import com.skd.videoplayer.domain.usecase.NameValidation
 import com.skd.videoplayer.domain.usecase.ValidateVideoNameUseCase
@@ -52,6 +53,7 @@ sealed interface VideoListEvent {
 abstract class VideoListViewModel(
     private val repository: VideoRepository,
     private val favoritesRepository: FavoritesRepository,
+    private val watchedVideosRepository: WatchedVideosRepository,
     private val editRepository: VideoEditRepository,
     private val filterAndSort: FilterAndSortVideosUseCase,
     private val validateName: ValidateVideoNameUseCase,
@@ -77,8 +79,15 @@ abstract class VideoListViewModel(
     val eventFlow: Flow<VideoListEvent> = events.receiveAsFlow()
 
     val uiState: StateFlow<VideoListUiState> by lazy {
-        combine(source(), favoritesRepository.observeFavoriteIds(), options) { result, favorites, opts ->
-            buildVideoListState(result, favorites, opts, filterAndSort)
+        // combine() waits for every flow's first value, so no video is shown before the watched
+        // ids are known and nothing flashes a NEW badge while they load.
+        combine(
+            source(),
+            favoritesRepository.observeFavoriteIds(),
+            watchedVideosRepository.observeWatchedIds(),
+            options,
+        ) { result, favorites, watched, opts ->
+            buildVideoListState(result, favorites, watched, opts, filterAndSort)
         }
             // Filtering and sorting thousands of items stays off the main thread.
             .flowOn(computeDispatcher)

@@ -21,6 +21,7 @@ import com.skd.videoplayer.di.ApplicationScope
 import com.skd.videoplayer.domain.model.PlaybackPosition
 import com.skd.videoplayer.domain.model.Video
 import com.skd.videoplayer.domain.repository.PlaybackPositionRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import com.skd.videoplayer.domain.usecase.GetPlaybackQueueUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -46,6 +47,7 @@ class PlayerViewModel @Inject constructor(
     private val getPlaybackQueue: GetPlaybackQueueUseCase,
     private val uriMetadata: ContentUriMetadataReader,
     private val playbackPositions: PlaybackPositionRepository,
+    private val watchedVideos: WatchedVideosRepository,
     @ApplicationScope private val appScope: CoroutineScope,
 ) : ViewModel() {
 
@@ -102,6 +104,8 @@ class PlayerViewModel @Inject constructor(
                 reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
             if (finished) currentMediaKey?.let(::clearPosition)
             currentMediaKey = mediaItem?.mediaId
+            // Next/previous and auto-advance start a different video; it counts as played too.
+            markWatched(currentMediaKey)
         }
     }
 
@@ -157,6 +161,7 @@ class PlayerViewModel @Inject constructor(
             val startKey = items[startIndex].mediaId
             val saved = playbackPositions.get(startKey)
             currentMediaKey = startKey
+            markWatched(startKey)
             player.setMediaItems(items, startIndex, C.TIME_UNSET)
             player.prepare()
             if (saved == null) {
@@ -352,6 +357,15 @@ class PlayerViewModel @Inject constructor(
         val positionMs = player.currentPosition.coerceAtLeast(0)
         val durationMs = player.duration.takeIf { it != C.TIME_UNSET } ?: 0
         appScope.launch { playbackPositions.save(key, positionMs, durationMs) }
+    }
+
+    /**
+     * Records a library video as played so its "NEW" badge goes away. Library items carry the
+     * numeric MediaStore id as media id; files opened from other apps use a URI and are ignored.
+     */
+    private fun markWatched(mediaId: String?) {
+        val videoId = mediaId?.toLongOrNull() ?: return
+        appScope.launch { watchedVideos.markWatched(videoId) }
     }
 
     private fun clearPosition(key: String) {

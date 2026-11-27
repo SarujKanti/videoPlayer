@@ -47,6 +47,7 @@ private fun Modifier.clickableIf(onClick: (() -> Unit)?): Modifier =
 fun VideoGridItem(
     video: Video,
     isFavorite: Boolean,
+    isNew: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onMenuAction: ((VideoMenuAction) -> Unit)? = null,
@@ -63,8 +64,17 @@ fun VideoGridItem(
                     .fillMaxWidth()
                     .aspectRatio(16f / 10f),
             )
-            Formatters.qualityLabel(video.width, video.height)?.let {
-                ThumbnailBadge(it, Modifier.align(Alignment.TopStart).padding(8.dp))
+            // NEW takes the top-start corner; the quality badge sits beside it instead of under it.
+            val quality = Formatters.qualityLabel(video.width, video.height)
+            if (isNew || quality != null) {
+                Row(
+                    modifier = Modifier.align(Alignment.TopStart).padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (isNew) NewBadge()
+                    quality?.let { ThumbnailBadge(it) }
+                }
             }
             if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(6.dp))
             if (video.durationMs > 0) {
@@ -107,6 +117,7 @@ fun VideoGridItem(
 fun VideoListItem(
     video: Video,
     isFavorite: Boolean,
+    isNew: Boolean = false,
     modifier: Modifier = Modifier,
     onClick: (() -> Unit)? = null,
     onMenuAction: ((VideoMenuAction) -> Unit)? = null,
@@ -127,6 +138,7 @@ fun VideoListItem(
                     .width(132.dp)
                     .aspectRatio(16f / 10f),
             )
+            if (isNew) NewBadge(Modifier.align(Alignment.TopStart).padding(6.dp))
             if (isFavorite) FavoriteBadge(Modifier.align(Alignment.TopEnd).padding(4.dp))
             if (video.durationMs > 0) {
                 ThumbnailBadge(

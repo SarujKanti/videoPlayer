@@ -7,11 +7,13 @@ import com.skd.videoplayer.data.repository.SettingsRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoEditRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoRepositoryImpl
 import com.skd.videoplayer.data.repository.VideoRowSource
+import com.skd.videoplayer.data.repository.WatchedVideosRepositoryImpl
 import com.skd.videoplayer.domain.repository.FavoritesRepository
 import com.skd.videoplayer.domain.repository.PlaybackPositionRepository
 import com.skd.videoplayer.domain.repository.SettingsRepository
 import com.skd.videoplayer.domain.repository.VideoEditRepository
 import com.skd.videoplayer.domain.repository.VideoRepository
+import com.skd.videoplayer.domain.repository.WatchedVideosRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -38,4 +40,7 @@ abstract class RepositoryModule {
 
     @Binds
     abstract fun bindPlaybackPositionRepository(impl: PlaybackPositionRepositoryImpl): PlaybackPositionRepository
+
+    @Binds
+    abstract fun bindWatchedVideosRepository(impl: WatchedVideosRepositoryImpl): WatchedVideosRepository
 }
